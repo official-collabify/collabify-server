@@ -19,3 +19,4 @@ tfplan
 
 # Logs & run output
 *.log
+.turbo/
