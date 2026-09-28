@@ -52,6 +52,7 @@ jobs:
             echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io \
               -u ${{ github.actor }} --password-stdin || true
             docker run --rm \
+              --network collabify_collabify-internal \
               --env-file /opt/collabify/.env.production \
               ${{ env.IMAGE }}:${{ github.sha }} \
               bunx prisma migrate deploy
@@ -63,21 +64,14 @@ jobs:
           username: deploy
           key: ${{ secrets.PROD_SSH_KEY }}
           script: |
-            cp /opt/collabify/.image-tags /opt/collabify/.image-tags.prev 2>/dev/null || true
-            # Update only backend tag; preserve existing frontend tag
-            PREV_FRONTEND=$(grep FRONTEND_TAG /opt/collabify/.image-tags 2>/dev/null | cut -d= -f2 || echo latest)
-            echo "BACKEND_TAG=${{ github.sha }}" > /opt/collabify/.image-tags
-            echo "FRONTEND_TAG=$PREV_FRONTEND" >> /opt/collabify/.image-tags
-
+            echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io \
+              -u ${{ github.actor }} --password-stdin || true
             cd /opt/collabify
-            BACKEND_TAG=${{ github.sha }} docker compose pull backend
-            BACKEND_TAG=${{ github.sha }} docker compose up -d --no-deps --force-recreate backend
-
-            sleep 20
-            curl -sf http://localhost:3001/ || \
-              (source /opt/collabify/.image-tags.prev && \
-               docker compose up -d --no-deps backend && \
-               echo "\u274c Backend rollback done" && exit 1)
-
+            export SERVER_IMAGE="${{ env.IMAGE }}:${{ github.sha }}"
+            docker compose pull server
+            docker compose up -d --no-deps server
+            docker compose up -d --no-deps caddy
+            sleep 5
+            docker compose ps
             docker image prune -f
-            echo "\u2705 Backend deploy: ${{ github.sha }}"
+            echo "✅ Backend deploy: ${{ github.sha }}"
