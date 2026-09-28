@@ -1,0 +1,78 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: collabify-api
+  namespace: collabify
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: collabify-api
+  template:
+    metadata:
+      labels:
+        app: collabify-api
+    spec:
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: node-role.kubernetes.io/ingest
+                    operator: In
+                    values: ["true"]
+      containers:
+        - name: api
+          image: oven/bun:1.2
+          workingDir: /app
+          command: ["sh", "-c", "bun run src/app/server.ts"]
+          ports:
+            - containerPort: 3001
+              name: http
+          envFrom:
+            - configMapRef:
+                name: collabify-config
+            - secretRef:
+                name: collabify-secrets
+          resources:
+            requests:
+              cpu: 250m
+              memory: 384Mi
+            limits:
+              cpu: 1000m
+              memory: 768Mi
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 3001
+            initialDelaySeconds: 10
+            periodSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 3001
+            initialDelaySeconds: 20
+            periodSeconds: 10
+          volumeMounts:
+            - name: app-code
+              mountPath: /app
+      volumes:
+        - name: app-code
+          hostPath:
+            path: /opt/collabify
+            type: Directory
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: collabify-api
+  namespace: collabify
+spec:
+  type: NodePort
+  ports:
+    - port: 3001
+      targetPort: 3001
+      nodePort: 30001
+      name: http-ws
+  selector:
+    app: collabify-api

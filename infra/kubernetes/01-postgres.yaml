@@ -1,0 +1,72 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: collabify-postgres
+  namespace: collabify
+spec:
+  serviceName: collabify-postgres
+  replicas: 1
+  selector:
+    matchLabels:
+      app: collabify-postgres
+  template:
+    metadata:
+      labels:
+        app: collabify-postgres
+    spec:
+      nodeSelector:
+        node-role.kubernetes.io/data: "true"
+      containers:
+        - name: postgres
+          image: postgres:16-alpine
+          env:
+            - name: POSTGRES_USER
+              value: postgres
+            - name: POSTGRES_PASSWORD
+              value: postgres
+            - name: POSTGRES_DB
+              value: collabify
+          ports:
+            - containerPort: 5432
+              hostPort: 5432
+              name: postgres
+          resources:
+            requests:
+              cpu: 250m
+              memory: 512Mi
+            limits:
+              cpu: 1000m
+              memory: 1Gi
+          volumeMounts:
+            - name: pgdata
+              mountPath: /var/lib/postgresql/data
+          readinessProbe:
+            exec:
+              command: ["pg_isready", "-U", "postgres"]
+            initialDelaySeconds: 5
+            periodSeconds: 5
+          livenessProbe:
+            exec:
+              command: ["pg_isready", "-U", "postgres"]
+            initialDelaySeconds: 15
+            periodSeconds: 10
+  volumeClaimTemplates:
+    - metadata:
+        name: pgdata
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: 5Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: collabify-postgres
+  namespace: collabify
+spec:
+  ports:
+    - port: 5432
+      targetPort: 5432
+  selector:
+    app: collabify-postgres

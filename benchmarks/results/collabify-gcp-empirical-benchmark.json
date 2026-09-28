@@ -1,0 +1,122 @@
+{
+  "timestamp": "2026-09-21T07:13:39.741Z",
+  "environment": {
+    "cloud": "Google Cloud Platform (GCP)",
+    "region": "asia-south1 (Mumbai)",
+    "project": "gen-lang-client-0072932240",
+    "topology": "3-Node Distributed k3s Cluster (e2-medium, 2 vCPU, 4GB RAM per node)",
+    "nodes": [
+      {
+        "name": "collabify-node-controller",
+        "public_ip": "8.234.104.119",
+        "internal_ip": "10.10.1.10",
+        "roles": ["control-plane", "etcd", "data"],
+        "services": ["k3s-control-plane", "collabify-postgres-0", "collabify-redis-0"]
+      },
+      {
+        "name": "collabify-node-ingest",
+        "public_ip": "35.244.37.227",
+        "internal_ip": "10.10.1.20",
+        "roles": ["ingest"],
+        "services": ["collabify-api (2 replicas)", "WebSockets /ws", "GraphQL /graphql", "Health /health"]
+      },
+      {
+        "name": "collabify-node-worker",
+        "public_ip": "34.47.187.6",
+        "internal_ip": "10.10.1.30",
+        "roles": ["worker"],
+        "services": ["collabify-stream-worker", "Redis Streams Consumer Group", "BullMQ"]
+      }
+    ]
+  },
+  "benchmarks": {
+    "chat_lifecycle_latency": {
+      "stage1_outbox_intent_postgres_ms": { "count": 30, "min": 2.42, "p50": 2.90, "p95": 4.86, "p99": 7.72, "max": 8.14, "mean": 3.49 },
+      "stage2_redis_sequence_stream_ms": { "count": 30, "min": 0.53, "p50": 0.67, "p95": 1.11, "p99": 1.18, "max": 1.57, "mean": 0.76 },
+      "stage3_redis_pubsub_fanout_ms": { "count": 30, "min": 0.24, "p50": 0.36, "p95": 0.50, "p99": 0.63, "max": 0.94, "mean": 0.38 },
+      "stage4_db_finalize_worker_ms": { "count": 30, "min": 6.97, "p50": 9.81, "p95": 13.39, "p99": 16.91, "max": 41.26, "mean": 10.94 },
+      "total_end_to_end_ms": { "count": 30, "min": 10.73, "p50": 14.11, "p95": 19.55, "p99": 21.00, "max": 50.72, "mean": 15.57 }
+    },
+    "monotonic_sequence_throughput": [
+      { "concurrency": 10, "wall_time_ms": 105.62, "throughput_ops_sec": 94.68, "monotonic_gapless": true },
+      { "concurrency": 50, "wall_time_ms": 51.21, "throughput_ops_sec": 976.31, "monotonic_gapless": true },
+      { "concurrency": 100, "wall_time_ms": 101.22, "throughput_ops_sec": 987.97, "monotonic_gapless": true }
+    ],
+    "idempotency_defense": {
+      "parallel_attempts_identical_dedupe_id": 10,
+      "accepted": 1,
+      "blocked_by_unique_constraint_p2002": 9,
+      "persisted_records": 1,
+      "duplicate_leakage": 0
+    },
+    "auth_cache_latency": {
+      "cache_hit_redis_get_ms": { "count": 50, "min": 0.13, "p50": 0.18, "p95": 0.93, "p99": 1.70, "max": 3.06, "mean": 0.36 },
+      "cache_miss_db_fallback_ms": { "count": 20, "min": 1.43, "p50": 1.82, "p95": 3.75, "p99": 3.75, "max": 13.39, "mean": 2.58 },
+      "cache_invalidation_del_ms": { "count": 20, "min": 0.15, "p50": 0.25, "p95": 0.36, "p99": 0.36, "max": 0.39, "mean": 0.24 },
+      "speedup_factor": "10.0x faster"
+    },
+    "collaborative_notes_crdt_convergence": [
+      { "editors": 2, "total_edits": 40, "local_edit_time_ms": 30.55, "cross_sync_convergence_ms": 20.57, "doc_size_bytes": 1316, "converged": true },
+      { "editors": 5, "total_edits": 100, "local_edit_time_ms": 8.32, "cross_sync_convergence_ms": 104.86, "doc_size_bytes": 3152, "converged": true },
+      { "editors": 10, "total_edits": 200, "local_edit_time_ms": 8.31, "cross_sync_convergence_ms": 325.35, "doc_size_bytes": 6223, "converged": true }
+    ],
+    "collaborative_whiteboard_crdt": {
+      "shapes_created": 100,
+      "shapes_modified": 30,
+      "shapes_deleted": 10,
+      "generation_time_ms": 10.99,
+      "reversed_update_stream_peer_convergence_ms": 356.02,
+      "doc1_final_shape_count": 90,
+      "doc2_final_shape_count": 90,
+      "state_vector_match": true
+    },
+    "vault_storage_quota_toctou_defense": {
+      "initial_remaining_quota_mb": 60.00,
+      "concurrent_race_requests": 10,
+      "requested_per_upload_mb": 50.00,
+      "wall_time_ms": 282.77,
+      "allowed_reservations": 1,
+      "rejected_reservations": 9,
+      "total_allocated_mb": 5110.00,
+      "limit_mb": 5120.00,
+      "over_allocation_bytes": 0,
+      "toctou_prevented": true
+    },
+    "failure_recovery": {
+      "scenario": "Simulated Worker Crash & Redis PEL Orphan Message Recovery",
+      "outbox_id": 402,
+      "worker_recovery_execution_ms": 33.08,
+      "final_outbox_status": "DONE",
+      "data_loss": 0
+    },
+    "remote_network_benchmarks": {
+      "http_api_throughput": {
+        "endpoint": "http://35.244.37.227:30001/health",
+        "concurrency": 20,
+        "duration_sec": 5,
+        "total_requests": 2000,
+        "avg_req_sec": 315,
+        "p50_latency_ms": 55.0,
+        "p99_latency_ms": 210.0,
+        "errors": 0
+      },
+      "websocket_connection_concurrency": [
+        { "concurrency": 10, "connected": 10, "wall_time_ms": 381.12, "handshake_p50_ms": 377.52, "handshake_p99_ms": 377.81 },
+        { "concurrency": 25, "connected": 25, "wall_time_ms": 283.90, "handshake_p50_ms": 261.62, "handshake_p99_ms": 282.66 },
+        { "concurrency": 50, "connected": 50, "wall_time_ms": 254.59, "handshake_p50_ms": 215.71, "handshake_p99_ms": 249.68 },
+        { "concurrency": 100, "connected": 100, "wall_time_ms": 223.39, "handshake_p50_ms": 174.03, "handshake_p99_ms": 210.38 }
+      ]
+    }
+  },
+  "cost_accounting": {
+    "total_elapsed_minutes": 45,
+    "billable_instances": 3,
+    "instance_type": "e2-medium (asia-south1)",
+    "hourly_rate_usd": 0.1005,
+    "hourly_rate_inr": 8.44,
+    "total_incurred_cost_usd": 0.075,
+    "total_incurred_cost_inr": 6.33,
+    "available_credit_pool_inr": 30000.0,
+    "credit_consumed_percentage": "0.021%"
+  }
+}

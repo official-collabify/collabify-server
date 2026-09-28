@@ -9,3 +9,13 @@ dist/
 ssl/server.crt
 ssl/server.key
 .env.production
+
+# Terraform
+**/.terraform/
+*.tfplan
+tfplan
+*.tfstate
+*.tfstate.*
+
+# Logs & run output
+*.log
