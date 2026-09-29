@@ -19,6 +19,14 @@ const getS3Config = (): S3ClientConfig => {
     region: env.AWS_REGION,
   };
 
+  // Support GCS S3-compatible API via endpoint override.
+  // GCS requires path-style URLs (storage.googleapis.com/bucket),
+  // not the default AWS virtual-hosted style (bucket.s3.amazonaws.com).
+  if (env.AWS_ENDPOINT) {
+    config.endpoint = env.AWS_ENDPOINT;
+    config.forcePathStyle = true;
+  }
+
   if (env.AWS_ACCESS_KEY_ID && env.AWS_SECRET_ACCESS_KEY) {
     config.credentials = {
       accessKeyId: env.AWS_ACCESS_KEY_ID,

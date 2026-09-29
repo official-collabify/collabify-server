@@ -48,7 +48,8 @@ const envSchema = z.object({
   SMTP_PASS: z.string().optional(),
   SMTP_SECURE: z.coerce.boolean().default(false), // true for port 465
 
-  // AWS (SES, S3, etc)
+  // AWS (SES, S3, GCS S3-compat, etc)
+  AWS_ENDPOINT: z.string().url().optional(), // Override endpoint for GCS S3-compat API
   AWS_ACCESS_KEY_ID: z.string().optional(),
   AWS_SECRET_ACCESS_KEY: z.string().optional(),
   AWS_REGION: z.string().default("us-east-1"),
