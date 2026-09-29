@@ -1,6 +1,7 @@
 import type { NotificationHandler, Recipient } from "../../types";
 import type { Payload } from "./definition";
 import { urls } from "../../_shared/build-helpers";
+export { renderWorkspaceRoleChangedEmail as emailTemplate } from "./email.template";
 
 export const handler: NotificationHandler<Payload> = {
   async resolveRecipients(payload): Promise<Recipient[]> {
@@ -21,14 +22,14 @@ export const handler: NotificationHandler<Payload> = {
   async buildEmail(payload) {
     return {
       to:       "",
-      subject:  `Your role in ${payload.workspaceName} was updated`,
+      subject:  `Your role in ${payload.workspaceName} has been updated`,
       template: "workspace-role-changed",
       data: {
-        actorName:    payload.actorName,
+        actorName:     payload.actorName,
         workspaceName: payload.workspaceName,
-        oldRoleName:  payload.oldRoleName,
-        newRoleName:  payload.newRoleName,
-        workspaceUrl: urls.workspace(payload.workspaceSlug),
+        oldRoleName:   payload.oldRoleName,
+        newRoleName:   payload.newRoleName,
+        ctaUrl:        urls.workspace(payload.workspaceSlug),
       },
     };
   },

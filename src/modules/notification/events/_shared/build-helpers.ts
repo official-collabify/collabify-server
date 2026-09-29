@@ -6,19 +6,21 @@
 
 import type { Recipient } from "../types";
 import type { EmailContent, InAppContent, PushContent, RealtimeContent } from "../types";
+import { env } from "@/shared/config/env";
 
-const APP_URL = process.env.APP_URL ?? "https://app.collabify.io";
+const APP_URL = process.env.APP_URL ?? env.FRONTEND_URL;
 
 // ── URL builders ──────────────────────────────────────────────────────────────
 
 export const urls = {
+  app:          ()                                      => APP_URL,
   workspace:    (slug: string)                          => `${APP_URL}/workspace/${slug}`,
   project:      (slug: string, projectId: string)       => `${APP_URL}/workspace/${slug}/project/${projectId}`,
   issue:        (slug: string, issueId: string)         => `${APP_URL}/workspace/${slug}/issues/${issueId}`,
   page:         (slug: string, pageId: string)          => `${APP_URL}/workspace/${slug}/pages/${pageId}`,
   whiteboard:   (slug: string, wbId: string)            => `${APP_URL}/workspace/${slug}/whiteboard/${wbId}`,
   conversation: (convId: string)                        => `${APP_URL}/chat/${convId}`,
-  inviteAccept: (token: string)                         => `${APP_URL}/invite/${token}`,
+  inviteAccept: (token: string)                         => `${APP_URL}/workspace/join?token=${token}`,
 };
 
 // ── Realtime helpers ──────────────────────────────────────────────────────────

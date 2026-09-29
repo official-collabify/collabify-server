@@ -1,6 +1,7 @@
 import type { NotificationHandler, Recipient } from "../../types";
 import type { Payload } from "./definition";
 import { urls } from "../../_shared/build-helpers";
+export { renderWorkspaceOwnershipTransferredEmail as emailTemplate } from "./email.template";
 
 export const handler: NotificationHandler<Payload> = {
   async resolveRecipients(payload): Promise<Recipient[]> {
@@ -33,13 +34,13 @@ export const handler: NotificationHandler<Payload> = {
       to:       "",
       subject:  isNewOwner
         ? `You're now the owner of ${payload.workspaceName}`
-        : `${payload.workspaceName} ownership was transferred`,
+        : `Ownership of ${payload.workspaceName} has been transferred`,
       template: "workspace-ownership-transferred",
       data: {
         isNewOwner,
-        actorName:    payload.actorName,
+        actorName:     payload.actorName,
         workspaceName: payload.workspaceName,
-        workspaceUrl: urls.workspace(payload.workspaceSlug),
+        ctaUrl:        urls.workspace(payload.workspaceSlug),
       },
     };
   },

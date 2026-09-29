@@ -1,6 +1,7 @@
 import type { NotificationHandler, Recipient, HandlerContext } from "../../types";
 import type { Payload } from "./definition";
 import { urls, actorName } from "../../_shared/build-helpers";
+export { renderWorkspaceInviteSentEmail as emailTemplate } from "./email.template";
 
 export const handler: NotificationHandler<Payload> = {
   async resolveRecipients(payload): Promise<Recipient[]> {
@@ -9,12 +10,12 @@ export const handler: NotificationHandler<Payload> = {
   },
 
   async shouldDeliver(payload, _recipient, ctx: HandlerContext): Promise<boolean> {
-    // Cancel delivery if invite was revoked before worker processes it
+    // Cancel delivery if invite was already revoked or expired
     const invite = await ctx.db.workspaceInvite.findUnique({
       where:  { id: payload.inviteId },
-      select: { status: true },
+      select: { expiresAt: true },
     }).catch(() => null);
-    return invite?.status === "PENDING";
+    return invite !== null && invite.expiresAt > new Date();
   },
 
   async buildEmail(payload) {
@@ -26,7 +27,7 @@ export const handler: NotificationHandler<Payload> = {
         inviterName:   payload.actorName,
         workspaceName: payload.workspaceName,
         roleName:      payload.roleName,
-        acceptUrl:     urls.inviteAccept(payload.inviteToken),
+        ctaUrl:        urls.inviteAccept(payload.inviteToken),
       },
     };
   },

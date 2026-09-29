@@ -1,6 +1,7 @@
 import type { NotificationHandler, Recipient, HandlerContext } from "../../types";
 import type { Payload } from "./definition";
 import { urls, pushOf } from "../../_shared/build-helpers";
+export { renderIssueAssignedEmail as emailTemplate } from "./email.template";
 
 export const handler: NotificationHandler<Payload> = {
   async resolveRecipients(payload): Promise<Recipient[]> {
@@ -38,14 +39,14 @@ export const handler: NotificationHandler<Payload> = {
   async buildEmail(payload) {
     return {
       to:       "",
-      subject:  `You were assigned to #${payload.issueNumber}: ${payload.issueTitle}`,
+      subject:  `${payload.actorName} assigned you to "${payload.issueTitle}"`,
       template: "issue-assigned",
       data: {
         actorName:   payload.actorName,
         issueTitle:  payload.issueTitle,
         issueNumber: payload.issueNumber,
         projectName: payload.projectName,
-        issueUrl:    urls.issue(payload.workspaceSlug, payload.issueId),
+        ctaUrl:      urls.issue(payload.workspaceSlug, payload.issueId),
       },
     };
   },

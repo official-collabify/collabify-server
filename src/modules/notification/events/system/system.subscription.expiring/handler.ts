@@ -1,6 +1,7 @@
 import type { NotificationHandler, Recipient } from "../../types";
 import type { Payload } from "./definition";
 import { urls } from "../../_shared/build-helpers";
+export { renderSubscriptionExpiringEmail as emailTemplate } from "./email.template";
 
 export const handler: NotificationHandler<Payload> = {
   async resolveRecipients(payload): Promise<Recipient[]> {
@@ -8,16 +9,21 @@ export const handler: NotificationHandler<Payload> = {
   },
 
   async buildEmail(payload) {
-    const urgency = payload.daysLeft <= 3 ? "⚠️ Urgent:" : "";
+    const isUrgent = payload.daysLeft <= 1;
+    const subject  = isUrgent
+      ? `⚠️ Final notice: your plan expires tomorrow`
+      : `Your ${payload.planName} plan expires in ${payload.daysLeft} day${payload.daysLeft === 1 ? "" : "s"}${
+          payload.daysLeft <= 3 ? " — renew now" : ""
+        }`;
     return {
-      to:       payload.billingUrl, // resolved by email worker from user record
-      subject:  `${urgency} Your ${payload.planName} plan expires in ${payload.daysLeft} day${payload.daysLeft === 1 ? "" : "s"}`,
+      to:       "", // resolved from user record by email worker
+      subject,
       template: "subscription-expiring",
       data: {
         workspaceName: payload.workspaceName,
         planName:      payload.planName,
         daysLeft:      payload.daysLeft,
-        expiresAt:     payload.expiresAt,
+        expiresAt:     new Date(payload.expiresAt).toLocaleDateString("en-GB", { weekday: "long", year: "numeric", month: "long", day: "numeric" }),
         billingUrl:    payload.billingUrl,
       },
     };

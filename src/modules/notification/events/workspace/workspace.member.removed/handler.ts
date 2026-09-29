@@ -1,6 +1,7 @@
 import type { NotificationHandler, Recipient } from "../../types";
 import type { Payload } from "./definition";
 import { urls } from "../../_shared/build-helpers";
+export { renderWorkspaceMemberRemovedEmail as emailTemplate } from "./email.template";
 
 export const handler: NotificationHandler<Payload> = {
   async resolveRecipients(payload): Promise<Recipient[]> {
@@ -23,7 +24,11 @@ export const handler: NotificationHandler<Payload> = {
       to:       "", // resolved from user record by email worker
       subject:  `You've been removed from ${payload.workspaceName}`,
       template: "workspace-member-removed",
-      data: { actorName: payload.actorName, workspaceName: payload.workspaceName },
+      data: {
+        actorName:     payload.actorName,
+        workspaceName: payload.workspaceName,
+        ctaUrl:        urls.app() + "/workspaces",
+      },
     };
   },
 };

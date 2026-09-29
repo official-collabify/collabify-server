@@ -1,6 +1,7 @@
 import type { NotificationHandler, Recipient, HandlerContext } from "../../types";
 import type { Payload } from "./definition";
 import { urls, pushOf } from "../../_shared/build-helpers";
+export { renderIssueDueDateEmail as emailTemplate } from "./email.template";
 
 export const handler: NotificationHandler<Payload> = {
   async resolveRecipients(payload): Promise<Recipient[]> {
@@ -9,10 +10,11 @@ export const handler: NotificationHandler<Payload> = {
 
   async shouldDeliver(payload, _r, ctx: HandlerContext): Promise<boolean> {
     const issue = await ctx.db.issue.findUnique({
-      where: { id: payload.issueId }, select: { dueDate: true, status: true },
+      where:  { id: payload.issueId },
+      select: { dueDate: true, status: { select: { name: true } } },
     }).catch(() => null);
     if (!issue?.dueDate) return false;
-    if (issue.status === "DONE" || issue.status === "CANCELLED") return false;
+    if (issue.status.name === "Done" || issue.status.name === "Canceled") return false;
     return true;
   },
 
@@ -34,17 +36,20 @@ export const handler: NotificationHandler<Payload> = {
   },
 
   async buildEmail(payload) {
+    const isTomorrow = payload.daysUntilDue === 1;
     return {
       to:       "",
-      subject:  `Reminder: #${payload.issueNumber} is due in ${payload.daysUntilDue} day${payload.daysUntilDue === 1 ? "" : "s"}`,
+      subject:  isTomorrow
+        ? `"${payload.issueTitle}" is due tomorrow`
+        : `"${payload.issueTitle}" is due in ${payload.daysUntilDue} days`,
       template: "issue-due-date",
       data: {
         issueTitle:   payload.issueTitle,
         issueNumber:  payload.issueNumber,
         projectName:  payload.projectName,
-        dueDate:      payload.dueDate,
+        dueDate:      new Date(payload.dueDate).toLocaleDateString("en-GB", { weekday: "long", year: "numeric", month: "long", day: "numeric" }),
         daysUntilDue: payload.daysUntilDue,
-        issueUrl:     urls.issue(payload.workspaceSlug, payload.issueId),
+        ctaUrl:       urls.issue(payload.workspaceSlug, payload.issueId),
       },
     };
   },

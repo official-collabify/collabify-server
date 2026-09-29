@@ -5,6 +5,7 @@ import { createLogger } from "@/shared/lib/logger";
 import * as idempotencyGuard from "../../shared/idempotency/idempotency-guard";
 import * as registry from "../../events/registry";
 import type { EmailJobData } from "../../events/types";
+import { renderEmail } from "./templates/render";
 
 // =============================================================================
 // Email Worker (Phase 4.1)
@@ -48,9 +49,8 @@ export const createEmailWorker = () =>
 
       try {
         // emailProvider abstracts SES / Resend / SendGrid / Nodemailer / console
-        // It accepts (to, subject, html) — we pass subject + template as html for now.
-        // When React Email templates are added, render them here before calling send().
-        await emailProvider.send(content.to, content.subject, buildHtml(content));
+        // It accepts (to, subject, html) — renderEmail renders the named template.
+        await emailProvider.send(content.to, content.subject, renderEmail(content.template, content.data));
 
         logger.info("Email job: delivered", { eventId, to: content.to });
       } catch (err) {
@@ -61,14 +61,4 @@ export const createEmailWorker = () =>
     { concurrency: CONCURRENCY.EMAIL }
   );
 
-// -----------------------------------------------------------------------------
-// Minimal HTML fallback until React Email templates are wired in (Phase 7+)
-// Each event handler's buildEmail() returns template + data — replace this
-// with a template renderer once templates/ directory is populated.
-// -----------------------------------------------------------------------------
-function buildHtml(content: { template: string; data: Record<string, unknown> }): string {
-  const entries = Object.entries(content.data)
-    .map(([k, v]) => `<tr><td><b>${k}</b></td><td>${String(v)}</td></tr>`)
-    .join("");
-  return `<table>${entries}</table>`;
-}
+

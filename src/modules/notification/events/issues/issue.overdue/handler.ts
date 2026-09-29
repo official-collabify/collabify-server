@@ -1,15 +1,17 @@
 import type { NotificationHandler, Recipient, HandlerContext } from "../../types";
 import type { Payload } from "./definition";
 import { urls } from "../../_shared/build-helpers";
+export { renderIssueOverdueEmail as emailTemplate } from "./email.template";
 export const handler: NotificationHandler<Payload> = {
   async resolveRecipients(payload): Promise<Recipient[]> {
     return [{ userId: payload.assigneeId, email: null }];
   },
   async shouldDeliver(payload, _r, ctx: HandlerContext): Promise<boolean> {
     const issue = await ctx.db.issue.findUnique({
-      where: { id: payload.issueId }, select: { status: true },
+      where:  { id: payload.issueId },
+      select: { status: { select: { name: true } } },
     }).catch(() => null);
-    if (issue?.status === "DONE" || issue?.status === "CANCELLED") return false;
+    if (issue?.status.name === "Done" || issue?.status.name === "Canceled") return false;
     return true;
   },
   async buildInApp(payload) {
@@ -22,9 +24,16 @@ export const handler: NotificationHandler<Payload> = {
   },
   async buildEmail(payload) {
     return {
-      to: "", subject: `Overdue: #${payload.issueNumber} ${payload.issueTitle}`,
+      to: "",
+      subject: `"${payload.issueTitle}" is ${payload.daysOverdue} day${payload.daysOverdue === 1 ? "" : "s"} overdue`,
       template: "issue-overdue",
-      data: { issueTitle: payload.issueTitle, issueNumber: payload.issueNumber, daysOverdue: payload.daysOverdue, issueUrl: urls.issue(payload.workspaceSlug, payload.issueId) },
+      data: {
+        issueTitle:  payload.issueTitle,
+        issueNumber: payload.issueNumber,
+        projectName: payload.projectName,
+        daysOverdue: payload.daysOverdue,
+        ctaUrl:      urls.issue(payload.workspaceSlug, payload.issueId),
+      },
     };
   },
 };

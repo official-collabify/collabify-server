@@ -1,5 +1,6 @@
 import type { NotificationHandler, Recipient } from "../../types";
 import type { Payload } from "./definition";
+export { renderPlanLimitEmail as emailTemplate } from "./email.template";
 
 const LIMIT_LABELS: Record<string, string> = {
   members:   "team members",
@@ -26,10 +27,14 @@ export const handler: NotificationHandler<Payload> = {
   },
 
   async buildEmail(payload) {
-    const label = LIMIT_LABELS[payload.limitType] ?? payload.limitType;
+    const label    = LIMIT_LABELS[payload.limitType] ?? payload.limitType;
+    const atLimit  = payload.usagePct >= 100;
+    const subject  = atLimit
+      ? `${payload.workspaceName} has hit its ${label} limit`
+      : `${payload.workspaceName} is at ${Math.round(payload.usagePct)}% of its ${label} limit`;
     return {
-      to:       payload.upgradeUrl, // worker resolves real email from user record
-      subject:  `Your workspace is at ${Math.round(payload.usagePct)}% of its ${label} limit`,
+      to:       "", // resolved from user record by email worker
+      subject,
       template: "plan-limit",
       data: {
         workspaceName: payload.workspaceName,

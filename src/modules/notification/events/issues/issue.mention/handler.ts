@@ -1,6 +1,7 @@
 import type { NotificationHandler, Recipient } from "../../types";
 import type { Payload } from "./definition";
 import { urls, pushOf } from "../../_shared/build-helpers";
+export { renderIssueMentionEmail as emailTemplate } from "./email.template";
 
 export const handler: NotificationHandler<Payload> = {
   async resolveRecipients(payload): Promise<Recipient[]> {
@@ -37,7 +38,7 @@ export const handler: NotificationHandler<Payload> = {
         issueNumber:    payload.issueNumber,
         projectName:    payload.projectName,
         contextSnippet: payload.contextSnippet,
-        issueUrl:       urls.issue(payload.workspaceSlug, payload.issueId),
+        ctaUrl:         urls.issue(payload.workspaceSlug, payload.issueId),
       },
     };
   },
