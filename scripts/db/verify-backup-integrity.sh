@@ -7,7 +7,7 @@
 # ==============================================================================
 set -euo pipefail
 
-BUCKET="${BACKUP_BUCKET:-gs://collabify-db-backups-production-512036370406/scheduled}"
+BUCKET="${BACKUP_BUCKET:-gs://collabify-db-backups-production-27bffaf6/scheduled}"
 TEMP_DIR="/mnt/collabify-data/backups/drill"
 mkdir -p "$TEMP_DIR"
 
