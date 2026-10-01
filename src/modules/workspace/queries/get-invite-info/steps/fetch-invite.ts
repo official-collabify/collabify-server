@@ -13,8 +13,20 @@ export async function fetchInvite(token: string, db: PrismaClient) {
     },
   });
 
-  if (!invite || invite.expiresAt < new Date()) {
-    throw AppError.notFound("INVITE_EXPIRED");
+  if (!invite) {
+    throw new AppError(
+      "This invite link is invalid or has already been used.",
+      "INVITE_NOT_FOUND",
+      404
+    );
+  }
+
+  if (invite.expiresAt < new Date()) {
+    throw new AppError(
+      "This invite link has expired.",
+      "INVITE_EXPIRED",
+      404
+    );
   }
 
   return invite;

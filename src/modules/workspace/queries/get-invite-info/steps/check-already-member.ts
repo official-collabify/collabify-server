@@ -7,7 +7,7 @@ import type { PrismaClient } from "@prisma/client";
 
 export async function checkAlreadyMember(
   workspaceId: string,
-  userId: string | undefined,
+  userId: string | null | undefined,
   db: PrismaClient
 ): Promise<void> {
   if (!userId) return;
@@ -18,6 +18,10 @@ export async function checkAlreadyMember(
   });
 
   if (member) {
-    throw AppError.conflict("ALREADY_MEMBER");
+    throw new AppError(
+      "You are already a member of this workspace.",
+      "ALREADY_WORKSPACE_MEMBER",
+      409
+    );
   }
 }

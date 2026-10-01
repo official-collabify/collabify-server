@@ -6,9 +6,14 @@ import { AppError } from "@/shared/errors";
 
 export function verifyInviteEmail(
   inviteEmail: string,
-  userEmail: string | undefined
+  userEmail?: string | null
 ): void {
-  if (userEmail && inviteEmail !== userEmail) {
-    throw AppError.forbidden("INVITE_EXPIRED");
+  if (
+    userEmail &&
+    inviteEmail.trim().toLowerCase() !== userEmail.trim().toLowerCase()
+  ) {
+    throw AppError.forbidden(
+      "This invite was sent to a different email address."
+    );
   }
 }

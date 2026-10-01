@@ -30,13 +30,26 @@ export const acceptInvite = async (
   const result = await db.$transaction(async (tx) => {
     // Step 1: fetch invite inside tx
     const invite = await tx.workspaceInvite.findUnique({ where: { token } });
-    if (!invite || invite.expiresAt < new Date()) {
-      throw AppError.notFound("INVITE_EXPIRED");
+    if (!invite) {
+      throw new AppError(
+        "This invite link is invalid or has already been used.",
+        "INVITE_NOT_FOUND",
+        404
+      );
+    }
+    if (invite.expiresAt < new Date()) {
+      throw new AppError(
+        "This invite link has expired.",
+        "INVITE_EXPIRED",
+        404
+      );
     }
 
     // Step 2: verify email inside tx
-    if (invite.email !== userEmail) {
-      throw AppError.forbidden("INVITE_EXPIRED");
+    if (invite.email.trim().toLowerCase() !== userEmail.trim().toLowerCase()) {
+      throw AppError.forbidden(
+        "This invite was sent to a different email address."
+      );
     }
 
     // Step 3: already a member? clean up + early success
@@ -93,7 +106,7 @@ export const acceptInvite = async (
 
   // Emit notification only for new members (not for already-member case)
   if (result.message !== "You are already a member.") {
-    const [inviter, invitee, actor] = await Promise.all([
+    const [_inviter, invitee, actor] = await Promise.all([
       db.user.findUnique({ where: { id: result.inviterId }, select: { fullName: true } }),
       db.user.findUnique({ where: { id: userId }, select: { fullName: true } }),
       db.user.findUnique({ where: { id: userId }, select: { fullName: true } }),

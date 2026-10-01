@@ -2,13 +2,18 @@ import { GraphQLError } from "graphql";
 import { AppError } from "./app-error";
 
 export function mapToGraphQLError(originalError: unknown): GraphQLError {
-  if (originalError instanceof AppError) {
-    return new GraphQLError(originalError.message, {
+  const unwrapped =
+    originalError instanceof GraphQLError && originalError.originalError
+      ? originalError.originalError
+      : originalError;
+
+  if (unwrapped instanceof AppError) {
+    return new GraphQLError(unwrapped.message, {
       extensions: {
-        code: originalError.code,
-        httpStatus: originalError.httpStatus,
-        isOperational: originalError.isOperational,
-        metadata: originalError.metadata,
+        code: unwrapped.code,
+        httpStatus: unwrapped.httpStatus,
+        isOperational: unwrapped.isOperational,
+        metadata: unwrapped.metadata,
       },
     });
   }
