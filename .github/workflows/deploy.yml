@@ -3,13 +3,41 @@ name: Deploy Backend to Production
 on:
   push:
     branches: [main]
+  workflow_dispatch:
 
 env:
   IMAGE: ghcr.io/official-collabify/collabify-server
 
 jobs:
+  quality-gate:
+    name: Pre-Deploy Safety & Quality Gate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Bun Runtime
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.x
+
+      - name: Install Dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Validate Prisma Schema
+        run: bunx prisma validate
+
+      - name: Check Migration Safety (Expand/Contract Rules)
+        run: bun run check-migration-safety
+
+      - name: Run Migration Safety Tests
+        run: bun test src/infra/__tests__/migration-safety.test.ts
+
+      - name: Validate Permission Manifests
+        run: bun run scripts/sync-permissions.ts --check
+
   deploy:
-    name: Build, Migrate & Deploy Backend
+    name: Build, Backup, Migrate & Deploy Backend
+    needs: [quality-gate]
     runs-on: ubuntu-latest
     environment: production
 
@@ -42,36 +70,81 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      - name: Run DB Migrations
+      - name: Safe Deploy to Production VM
         uses: appleboy/ssh-action@v1
         with:
           host: ${{ secrets.PROD_HOST }}
           username: deploy
           key: ${{ secrets.PROD_SSH_KEY }}
           script: |
+            set -euo pipefail
+
+            # 1. Host-level deployment concurrency lock
+            exec 200>/var/lock/collabify-deploy.lock
+            if ! flock -n 200; then
+              echo "❌ Error: Another deployment or maintenance task is running on this server. Aborting."
+              exit 1
+            fi
+
+            # 2. Preflight disk space safety check
+            DISK_USAGE=$(df /mnt/collabify-data | awk 'NR==2 {print $5}' | tr -d '%')
+            if [ "$DISK_USAGE" -gt 85 ]; then
+              echo "❌ Error: Disk usage exceeds 85% (${DISK_USAGE}%). Aborting deploy."
+              exit 1
+            fi
+
+            # 3. Capture previous running container image for auto-rollback
+            PREV_SERVER_IMAGE=$(docker inspect --format='{{.Config.Image}}' collabify-server 2>/dev/null || echo '')
+            echo "Current running server image: ${PREV_SERVER_IMAGE}"
+
+            # 4. Verified pre-deployment instant database backup
+            echo "==> Triggering verified pre-deployment database backup..."
+            sudo -n /usr/local/bin/collabify-backup.sh
+
+            # 5. Authenticate docker with GHCR on VM
             echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io \
               -u ${{ github.actor }} --password-stdin || true
-            docker run --rm \
+
+            # 6. Execute isolated database migrations before shifting traffic
+            echo "==> Running Prisma database migrations with target image..."
+            if ! docker run --rm \
               --network collabify_collabify-internal \
               --env-file /opt/collabify/.env.production \
               ${{ env.IMAGE }}:${{ github.sha }} \
-              bunx prisma migrate deploy
+              bunx prisma migrate deploy; then
+              echo "❌ Migration failed! Old containers remain active. Aborting deployment."
+              exit 1
+            fi
 
-      - name: Deploy Backend
-        uses: appleboy/ssh-action@v1
-        with:
-          host: ${{ secrets.PROD_HOST }}
-          username: deploy
-          key: ${{ secrets.PROD_SSH_KEY }}
-          script: |
-            echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io \
-              -u ${{ github.actor }} --password-stdin || true
+            # 7. Rolling update backend container
+            echo "==> Updating backend container..."
             cd /opt/collabify
             export SERVER_IMAGE="${{ env.IMAGE }}:${{ github.sha }}"
             docker compose pull server
             docker compose up -d --no-deps server
             docker compose up -d --no-deps caddy
-            sleep 5
-            docker compose ps
+
+            # 8. Post-Deployment Health Check Verification Gate (60s)
+            echo "==> Verifying backend health on https://api.collabifyy.com/health..."
+            HEALTHY=false
+            for i in {1..12}; do
+              if curl -s -f https://api.collabifyy.com/health | grep -q '"status":"ok"'; then
+                HEALTHY=true
+                break
+              fi
+              echo "Waiting for backend health check (attempt $i/12)..."
+              sleep 5
+            done
+
+            if [ "$HEALTHY" != true ]; then
+              echo "❌ Health check failed after 60 seconds! Initiating automatic application rollback..."
+              if [ -n "$PREV_SERVER_IMAGE" ]; then
+                export SERVER_IMAGE="$PREV_SERVER_IMAGE"
+                docker compose up -d --no-deps server
+                echo "⚠️ Rolled back backend container to: $PREV_SERVER_IMAGE"
+              fi
+              exit 1
+            fi
+
             docker image prune -f
-            echo "✅ Backend deploy: ${{ github.sha }}"
+            echo "✅ Backend deploy verified successfully: ${{ github.sha }}"
