@@ -3,7 +3,7 @@ import { printSchema } from "graphql";
 import { schema } from "../src/graphql/schema";
 import path from "node:path";
 
-const CLIENT_SCHEMA_PATH = path.join(process.cwd(), "../client/schema.graphql");
+const CLIENT_SCHEMA_PATH = path.resolve(__dirname, "../../client/schema.graphql");
 // eslint-disable-next-line no-console
 console.log(`🔄 Syncing GraphQL Schema to ${CLIENT_SCHEMA_PATH}...`);
 

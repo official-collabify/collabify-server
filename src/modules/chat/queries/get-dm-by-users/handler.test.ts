@@ -9,7 +9,7 @@ import { ConversationType } from "@/graphql/generated";
 
 mock.module("@/infra/db", () => ({
   db: {
-    chatConversation: { findFirst: mock() },
+    chatConversation: { findFirst: mock(), findUnique: mock() },
   },
 }));
 
@@ -65,6 +65,7 @@ const buildCtx = (overrides: Partial<ServiceContext> = {}): ServiceContext =>
     authGate: {
       getChannel: mock(async () => null),
       assertChannelMember: mock(async () => {}),
+      assertProjectMember: mock(async () => {}),
     } as any,
     permissions: {
       assert: mock(async () => {}),
@@ -81,6 +82,7 @@ const buildCtx = (overrides: Partial<ServiceContext> = {}): ServiceContext =>
 describe("getDmByUsers", () => {
   beforeEach(() => {
     mock.restore();
+    (db.chatConversation.findUnique as any).mockResolvedValue(mockDmRow);
     (db.chatConversation.findFirst as any).mockResolvedValue(mockDmRow);
   });
 
@@ -106,6 +108,19 @@ describe("getDmByUsers", () => {
       // would propagate. This test documents that known gap.
       await expect(handler(validInput, ctx)).resolves.toBeDefined(); // null userId still finds DM
     });
+
+    it("1.4 throws 403 when caller is not a project member", async () => {
+      const ctx = buildCtx({
+        authGate: {
+          getChannel: mock(async () => null),
+          assertChannelMember: mock(async () => {}),
+          assertProjectMember: mock(async () => {
+            throw AppError.forbidden("You are not a member of this project.");
+          }),
+        } as any,
+      });
+      await expect(handler(validInput, ctx)).rejects.toMatchObject({ httpStatus: 403 });
+    });
   });
 
   // ── Section 2: Self-DM Guard ──────────────────────────────────────────────
@@ -118,14 +133,14 @@ describe("getDmByUsers", () => {
     });
 
     it("2.2 does not hit the DB when self-DM guard triggers", async () => {
-      const findFirst = mock(async () => null);
+      const findUnique = mock(async () => null);
       const ctx = buildCtx({
         auth: { userId: USER_ID, sessionId: "s" },
-        db: { chatConversation: { findFirst } } as any,
+        db: { chatConversation: { findUnique } } as any,
       });
       const input = { ...validInput, otherUserId: USER_ID };
       await handler(input, ctx).catch(() => {});
-      expect(findFirst).not.toHaveBeenCalled();
+      expect(findUnique).not.toHaveBeenCalled();
     });
   });
 
@@ -143,37 +158,30 @@ describe("getDmByUsers", () => {
     });
 
     it("3.2 returns null when no DM exists (not an error)", async () => {
-      (db.chatConversation.findFirst as any).mockResolvedValueOnce(null);
+      (db.chatConversation.findUnique as any).mockResolvedValueOnce(null);
       const result = await handler(validInput, buildCtx());
       expect(result).toBeNull();
     });
 
-    it("3.3 passes both userId and otherUserId to the DB AND filter", async () => {
+    it("3.3 passes both userId and otherUserId to the DB dmHash lookup", async () => {
       const ctx = buildCtx();
       await handler(validInput, ctx);
-      expect(db.chatConversation.findFirst).toHaveBeenCalledWith(
+      const [u1, u2] = [USER_ID, OTHER_USER_ID].sort();
+      const expectedDmHash = `proj_${PROJECT_ID}_${u1}_${u2}`;
+      expect(db.chatConversation.findUnique).toHaveBeenCalledWith(
         expect.objectContaining({
-          where: expect.objectContaining({
-            AND: [
-              { members: { some: { userId: USER_ID } } },
-              { members: { some: { userId: OTHER_USER_ID } } },
-            ],
-          }),
+          where: { dmHash: expectedDmHash },
         })
       );
     });
 
-    it("3.4 scopes query to workspaceId + projectId + DM type", async () => {
+    it("3.4 scopes query to deterministic project-level dmHash", async () => {
       const ctx = buildCtx();
       await handler(validInput, ctx);
-      expect(db.chatConversation.findFirst).toHaveBeenCalledWith(
+      const [u1, u2] = [USER_ID, OTHER_USER_ID].sort();
+      expect(db.chatConversation.findUnique).toHaveBeenCalledWith(
         expect.objectContaining({
-          where: expect.objectContaining({
-            workspaceId: WORKSPACE_ID,
-            projectId: PROJECT_ID,
-            type: "DM",
-            deletedAt: null,
-          }),
+          where: { dmHash: `proj_${PROJECT_ID}_${u1}_${u2}` },
         })
       );
     });
@@ -192,7 +200,7 @@ describe("getDmByUsers", () => {
 
   describe("4. Member Mapping", () => {
     it("4.1 fullName falls back to 'Unknown' for null names", async () => {
-      (db.chatConversation.findFirst as any).mockResolvedValueOnce({
+      (db.chatConversation.findUnique as any).mockResolvedValueOnce({
         ...mockDmRow,
         members: [
           { ...mockDmRow.members[0], user: { ...mockDmRow.members[0].user, fullName: null } },
@@ -223,7 +231,7 @@ describe("getDmByUsers", () => {
     });
 
     it("5.3 non-operational DB error propagates as raw Error", async () => {
-      (db.chatConversation.findFirst as any).mockRejectedValueOnce(new Error("DB dead"));
+      (db.chatConversation.findUnique as any).mockRejectedValueOnce(new Error("DB dead"));
       const err: any = await handler(validInput, buildCtx()).catch((e) => e);
       expect(err).not.toBeInstanceOf(AppError);
       expect(err.message).toBe("DB dead");

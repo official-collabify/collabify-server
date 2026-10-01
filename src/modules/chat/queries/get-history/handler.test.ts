@@ -23,6 +23,7 @@ import { db } from "@/infra/db";
 
 const CONVERSATION_ID = "clh1111111111abcdefghijk0";
 const WORKSPACE_ID    = "clh2222222222abcdefghijk1";
+const PROJECT_ID      = "clh3333333333abcdefghijk2";
 
 const validInput = {
   conversationId: CONVERSATION_ID,
@@ -53,7 +54,7 @@ const buildCtx = (overrides: Partial<ServiceContext> = {}): ServiceContext =>
     db: db as any,
     auth: { userId: "user-1", sessionId: "sess_test" },
     authGate: {
-      getChannel: mock(async () => ({ workspaceId: WORKSPACE_ID })),
+      getChannel: mock(async () => ({ workspaceId: WORKSPACE_ID, projectId: PROJECT_ID })),
       assertChannelMember: mock(async () => {}),
     } as any,
     permissions: {
@@ -101,7 +102,7 @@ describe("getHistory", () => {
     it("1.4 throws 403 when caller is not a channel member", async () => {
       const ctx = buildCtx({
         authGate: {
-          getChannel: mock(async () => ({ workspaceId: WORKSPACE_ID })),
+          getChannel: mock(async () => ({ workspaceId: WORKSPACE_ID, projectId: PROJECT_ID })),
           assertChannelMember: mock(async () => { throw AppError.forbidden(); }),
         } as any,
       });
@@ -116,7 +117,7 @@ describe("getHistory", () => {
     });
 
     it("1.6 calls getChannel exactly once per request", async () => {
-      const getChannel = mock(async () => ({ workspaceId: WORKSPACE_ID }));
+      const getChannel = mock(async () => ({ workspaceId: WORKSPACE_ID, projectId: PROJECT_ID }));
       const ctx = buildCtx({ authGate: { getChannel, assertChannelMember: mock(async () => {}) } as any });
       await handler(validInput, ctx);
       expect(getChannel).toHaveBeenCalledTimes(1);
@@ -129,7 +130,7 @@ describe("getHistory", () => {
       await handler(validInput, ctx);
       expect(assert).toHaveBeenCalledWith(
         "chat:channel:read",
-        { type: "workspace", id: WORKSPACE_ID }
+        { type: "project", id: PROJECT_ID, workspaceId: WORKSPACE_ID }
       );
     });
   });

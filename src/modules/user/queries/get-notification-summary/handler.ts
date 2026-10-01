@@ -4,10 +4,13 @@
  * Returns the current user's global notification preferences.
  * Feeds the Layer 1 + 2 notification settings UI.
  */
-import type { GetNotificationSummaryInput, NotificationSummaryOutput } from "./types";
+import type { GetNotificationSummaryInput } from "./schema";
+import type { NotificationSummaryOutput } from "./types";
 import * as prefCache from "@/modules/notification/shared/preferences/preference-cache";
-import { ALL_CATEGORIES, categoryDefaults } from "@/modules/notification/shared/preferences/preference-defaults";
-import type { NotificationCategory } from "@/modules/notification/events/types";
+import {
+  mapCategoriesToGql,
+  mapGlobalNotifModeToGql,
+} from "@/modules/user/graphql/mappers";
 
 export const getNotificationSummary = async (
   input: GetNotificationSummaryInput
@@ -16,17 +19,14 @@ export const getNotificationSummary = async (
 
   const global = await prefCache.getGlobal(userId);
 
-  const categories = ALL_CATEGORIES.map((cat) => {
-    const s = global.categories[cat as NotificationCategory] ?? categoryDefaults[cat as NotificationCategory];
-    return { category: cat, email: s.email, push: s.push, inApp: s.inApp };
-  });
+  const categories = mapCategoriesToGql(global.categories);
 
   const isDndActive = global.muteUntil
     ? new Date(global.muteUntil).getTime() > Date.now()
     : false;
 
   return {
-    globalMode:   global.globalMode,
+    globalMode:   mapGlobalNotifModeToGql(global.globalMode),
     emailEnabled: global.emailEnabled,
     pushEnabled:  global.pushEnabled,
     isDndActive,

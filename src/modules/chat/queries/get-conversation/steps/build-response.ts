@@ -19,19 +19,22 @@ export function buildResponse(
   row: ConversationRow,
   unreadCount: number,
   lastMessage: LastMessageRow | null,
-  _userId: string
+  userId: string
 ): Conversation {
+  const caller = row.members.find((m) => m.userId === userId);
+
   return {
     id: row.id,
     type: row.type as unknown as ConversationType,
     name: row.name,
     topic: row.topic,
-    isPublic: row.isPublic,
+    isPublic: row.isPublic ?? row.type === "CHANNEL",
     workspaceId: row.workspaceId,
     projectId: row.projectId,
     parentMessageId: row.parentMessageId,
     createdBy: null, // Not tracked in current schema
     isArchived: row.isArchived,
+    isMuted: caller?.isMuted ?? false,
     memberCount: row.members.length,
     unreadCount,
     members: row.members.map((m: MemberRow) => ({

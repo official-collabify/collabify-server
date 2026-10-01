@@ -15,6 +15,6 @@ export async function fetchMessageConversation(
     where: { id: messageId },
     select: { conversationId: true },
   });
-  if (!message) throw AppError.notFound("Message not found");
+  if (!message) throw AppError.notFound("Message not found", "MESSAGE_NOT_FOUND");
   return { conversationId: message.conversationId };
 }

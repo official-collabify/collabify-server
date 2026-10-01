@@ -11,19 +11,21 @@
  */
 import { AppError } from "@/shared/errors";
 import { createLogger } from "@/shared/lib/logger";
-import type { UpdateGlobalNotifPrefsInput } from "./types";
+import type { UpdateGlobalNotifPrefsInput, UpdateGlobalNotifPrefsOutput } from "./types";
 import type { ServiceContext } from "@/graphql/types";
 import * as prefWriter from "@/modules/notification/shared/preferences/preference-writer";
 import * as prefCache from "@/modules/notification/shared/preferences/preference-cache";
-import { ALL_CATEGORIES, categoryDefaults } from "@/modules/notification/shared/preferences/preference-defaults";
-import type { NotificationCategory } from "@/modules/notification/events/types";
+import {
+  mapCategoriesToGql,
+  mapGlobalNotifModeToGql,
+} from "@/modules/user/graphql/mappers";
 
 const log = createLogger("user:services:update-global-notif-prefs");
 
 export const updateGlobalNotifPrefs = async (
   input: UpdateGlobalNotifPrefsInput,
   _ctx: ServiceContext
-) => {
+): Promise<UpdateGlobalNotifPrefsOutput> => {
   const { userId, muteUntil, ...rest } = input;
 
   await prefWriter.updateGlobal(userId, {
@@ -32,14 +34,7 @@ export const updateGlobalNotifPrefs = async (
   });
 
   const fresh = await prefCache.getGlobal(userId);
-  const categories = ALL_CATEGORIES.map((cat) => {
-    const s = fresh.categories[cat as NotificationCategory] ?? categoryDefaults[cat as NotificationCategory];
-    return { category: cat, email: s.email, push: s.push, inApp: s.inApp };
-  });
-
-  const isDndActive = fresh.muteUntil
-    ? new Date(fresh.muteUntil).getTime() > Date.now()
-    : false;
+  const categories = mapCategoriesToGql(fresh.categories);
 
   log.debug("Global notif prefs updated", { userId });
 
@@ -47,9 +42,7 @@ export const updateGlobalNotifPrefs = async (
     emailEnabled: fresh.emailEnabled,
     pushEnabled:  fresh.pushEnabled,
     inAppEnabled: fresh.inAppEnabled,
-    globalMode:   fresh.globalMode,
-    isDndActive,
-    dndUntil:     isDndActive ? fresh.muteUntil : null,
+    globalMode:   mapGlobalNotifModeToGql(fresh.globalMode),
     categories,
   };
 };

@@ -31,8 +31,9 @@ import { db } from "@/infra/db";
 const CHANNEL_ID   = "clh1234567890abcdefghijk0";
 const USER_ID      = "clh0000000000abcdefghijk1";
 const WORKSPACE_ID = "clh9999999999abcdefghijk2";
+const PROJECT_ID   = "clh8888888888abcdefghijk3";
 
-const mockChannel = { id: CHANNEL_ID, workspaceId: WORKSPACE_ID };
+const mockChannel = { id: CHANNEL_ID, workspaceId: WORKSPACE_ID, projectId: PROJECT_ID };
 
 const now = new Date();
 
@@ -266,7 +267,7 @@ describe("getChannelMembers", () => {
       await handler(validInput, ctx);
       expect(assert).toHaveBeenCalledWith(
         "chat:channel:member:read",
-        expect.objectContaining({ type: "workspace", id: WORKSPACE_ID })
+        expect.objectContaining({ type: "project", id: PROJECT_ID, workspaceId: WORKSPACE_ID })
       );
     });
   });

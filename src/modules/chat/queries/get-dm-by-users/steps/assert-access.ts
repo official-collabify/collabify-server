@@ -4,15 +4,11 @@ import { AppError } from "@/shared/errors";
 /**
  * assertAccess — auth gate for getDmByUsers.
  *
- * getDmByUsers only requires an authenticated session (🔐 userId).
- * Per auth-api-inventory, no workspace/project member assertion is needed —
- * the query is scoped to conversations the caller is already a member of via
- * the DB filter (members.some({ userId })).
+ * Checks that the caller is authenticated and asserts that the caller is a member
+ * of the project where the DM conversation is scoped.
  *
- * The original handler incorrectly used assertProjectMember here, which was
- * both wrong and a potential silent bypass if getProject returned null.
- *
- * @throws AppError 401  if ctx.authGate or ctx.permissions is missing (unauthenticated)
+ * @throws AppError 401 if unauthenticated
+ * @throws AppError 403 if caller is not a member of the project
  */
 export async function assertAccess(
   projectId: string,
@@ -21,3 +17,4 @@ export async function assertAccess(
   if (!ctx.authGate || !ctx.permissions) throw AppError.unauthorized();
   await ctx.authGate.assertProjectMember(projectId);
 }
+

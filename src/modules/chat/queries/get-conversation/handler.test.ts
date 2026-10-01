@@ -27,8 +27,9 @@ import { db } from "@/infra/db";
 const CONV_ID      = "clh1111111111abcdefghijk0";
 const USER_ID      = "clh2222222222abcdefghijk1";
 const WORKSPACE_ID = "clh3333333333abcdefghijk2";
+const PROJECT_ID   = "clh4444444444abcdefghijk3";
 
-const mockChannel = { id: CONV_ID, workspaceId: WORKSPACE_ID };
+const mockChannel = { id: CONV_ID, workspaceId: WORKSPACE_ID, projectId: PROJECT_ID };
 
 const now = new Date("2024-06-01T10:00:00Z");
 
@@ -48,7 +49,7 @@ const mockConversationRow = {
   topic: null,
   isArchived: false,
   workspaceId: WORKSPACE_ID,
-  projectId: null,
+  projectId: PROJECT_ID,
   parentMessageId: null,
   createdAt: now,
   updatedAt: now,
@@ -306,7 +307,7 @@ describe("getConversation", () => {
       await handler(validInput, ctx);
       expect(assert).toHaveBeenCalledWith(
         "chat:channel:read",
-        expect.objectContaining({ type: "workspace", id: WORKSPACE_ID })
+        expect.objectContaining({ type: "project", id: PROJECT_ID, workspaceId: WORKSPACE_ID })
       );
     });
   });

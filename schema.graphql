@@ -1,0 +1,2185 @@
+"""
+A date-time string at UTC, such as 2007-12-03T10:15:30Z, compliant with the `date-time` format outlined in section 5.6 of the RFC 3339 profile of the ISO 8601 standard for representation of dates and times using the Gregorian calendar.
+"""
+scalar DateTime
+
+"""
+The `JSON` scalar type represents JSON values as specified by [ECMA-404](http://www.ecma-international.org/publications/files/ECMA-ST/ECMA-404.pdf).
+"""
+scalar JSON @specifiedBy(url: "http://www.ecma-international.org/publications/files/ECMA-ST/ECMA-404.pdf")
+
+type PageInfo {
+  hasNextPage: Boolean!
+  endCursor: String
+}
+
+type Query {
+  health: String!
+  me: User
+  user(userId: ID!): PublicUser
+  workspaceUser(workspaceId: ID!, userId: ID!): WorkspaceMember
+  userHome: UserHomeData
+  myNotificationSummary: NotificationSummary!
+  getWorkspaceInviteInfo(token: String!): WorkspaceInviteInfo!
+  myWorkspaces: [Workspace!]!
+  onboardingStatus: OnboardingStatus!
+  workspaceBySlug(slug: String!): Workspace!
+  workspaceMembers(workspaceId: ID!): [WorkspaceMember!]!
+  workspaceById(workspaceId: ID!): Workspace
+  workspaceInvites(workspaceId: ID!): [WorkspaceInvite!]!
+  workspaceRoles(workspaceId: ID!): [WorkspaceRole!]!
+  rolePermissions(roleId: ID!, workspaceId: ID!): [RolePermission!]!
+  workspaceOverview(workspaceId: ID!): WorkspaceOverview!
+  workspacePermissions(workspaceId: ID!): [Permission!]!
+  notifications(limit: Int, cursor: String, isRead: Boolean): NotificationConnection!
+  unreadNotificationCount: Int!
+  myProjects(workspaceId: ID!): [Project!]!
+  projectBySlug(workspaceId: ID!, slug: String!): Project
+  project(id: ID!): Project
+  projectMembers(projectId: ID!): [ProjectMember!]!
+  projectRoles(projectId: ID!, workspaceId: ID!): [ProjectRole!]!
+  projectOverview(projectId: ID!): ProjectOverview!
+  allPermissions(workspaceId: ID!): [Permission!]!
+  projectPermissions(workspaceId: ID!, projectId: ID!): [Permission!]!
+  projectContributorStats(projectId: ID!): [ContributorStats!]!
+  getProjectEntities(projectId: ID!): [SearchEntity!]!
+  getThreadMessages(parentMessageId: ID!, limit: Int, beforeCursor: ID): [ChatMessage!]!
+  getMessageById(messageId: ID!): ChatMessage
+  getMessagesAfterCursor(channelId: ID!, afterCursor: ID!, limit: Int): [ChatMessage!]!
+  getMissingMessages(channelId: ID!, rangeStart: ID!, rangeEnd: ID!): [ChatMessage!]!
+  getChannelMembers(channelId: ID!, limit: Int, offset: Int): [ChatMemberRecord!]!
+  getLastReadMessage(channelId: ID!): ID
+  messagesDelta(conversationId: ID!, afterSequence: Int, afterStreamId: String, limit: Int): MessagesDelta!
+  history(conversationId: ID!, beforeSequence: Int!, limit: Int): HistoryPayload!
+  messageReactions(messageId: ID!): [MessageReaction!]!
+  reactionUsers(messageId: ID!, emoji: String!, cursor: Int): ReactionUsersConnection!
+  getUnreadCounts(workspaceId: ID!, projectId: ID!): UnreadCountsResponse!
+  getReadReceipts(messageId: ID!): ReadReceiptsResponse!
+  getUserConversations(workspaceId: ID!, projectId: ID!, type: ConversationType, includeArchived: Boolean, limit: Int, cursor: String): ConversationConnection!
+  getConversation(conversationId: ID!): Conversation!
+  getDmByUsers(workspaceId: ID!, projectId: ID!, otherUserId: ID!): DmConversation
+  getProjectDms(projectId: ID!, workspaceId: ID!): [ProjectDmItem!]!
+  getUsersByIds(userIds: [ID!]!): [UserBasic!]!
+  getBoard(boardId: ID!): Whiteboard
+  userBoards(workspaceId: ID!, projectId: ID, limit: Int, cursor: ID): BoardConnection!
+  boardCollaborators(boardId: ID!): [BoardCollaborator!]!
+  workspaceBoards(workspaceId: ID!, includeArchived: Boolean, limit: Int, cursor: ID): BoardConnection!
+  getBoardSnapshot(boardId: ID!, clientSnapshot: String): BoardSnapshot!
+  activeCollaborators(boardId: ID!): [ActiveCollaborator!]!
+
+  """Fetch page metadata. Use getPageSnapshot for Y.Doc content."""
+  getPage(pageId: ID!): Page!
+
+  """
+  Returns the authoritative Y.Doc snapshot diff + a stream cursor for gap-fill.
+  
+  First open (no offline state):
+    getPageSnapshot(pageId: "cuid")
+  
+  Reconnect with offline edits:
+    getPageSnapshot(pageId: "cuid", clientSnapshot: "<base64 Y.encodeStateAsUpdate>")
+  
+  Client workflow:
+    1. Call this query → receive { snapshot, lastStreamId }
+    2. Apply snapshot: Y.applyUpdate(localDoc, base64Decode(snapshot))
+    3. Open WS: page:subscribe-page { pageId, lastStreamId }  ← gap-fill
+  """
+  getPageSnapshot(pageId: ID!): PageSnapshot!
+
+  """
+  Returns the full nested page tree for a project (non-archived, non-deleted).
+  """
+  getProjectPages(projectId: ID!): [Page!]!
+
+  """
+  DB collaborator list (authoritative). For real-time presence, use getActivePageCollaborators.
+  """
+  getPageCollaborators(pageId: ID!): [PageCollaborator!]!
+
+  """
+  Live presence from Redis ZSET (not DB). Reflects current editing sessions.
+  """
+  getActivePageCollaborators(pageId: ID!): [PageCollaborator!]!
+  getPagesHome(workspaceId: ID!, projectId: ID!, limit: Int): PagesHomeResult!
+
+  """
+  Returns the immediate children (subfolders + files) of a folder.
+  parentFolderId = null → Home view (root-level items with no parent).
+  """
+  getVaultChildren(projectId: ID!, parentFolderId: ID, cursor: ID, limit: Int, sortBy: VaultSortField, sortDir: SortDirection): VaultChildrenResult!
+
+  """
+  Returns full metadata for a single vault folder or file.
+  Used for the detail/info side panel. Not used for listing.
+  """
+  getVaultNode(id: ID!, type: VaultNodeType!): VaultNode!
+
+  """
+  Returns sidebar data: user-pinned folders + system folders (From Chat, From Pages, etc.).
+  Fetched once on Vault mount. Never re-called during folder navigation.
+  """
+  getVaultSidebar(projectId: ID!): VaultSidebar!
+
+  """
+  Returns a short-lived presigned GET URL for downloading or previewing a vault file.
+  URL is valid for 5 minutes. Never cache — always request fresh.
+  """
+  getVaultDownloadUrl(fileId: ID!): VaultDownloadUrl!
+
+  """
+  Returns current storage usage for the project and its workspace.
+  Poll every 60 seconds + invalidate after uploads/deletions.
+  """
+  getVaultUsage(projectId: ID!): VaultUsage!
+
+  """
+  Returns the ancestor folder chain for a given folder, ordered root → current.
+  The last element is the folder itself, the first is the top-level ancestor.
+  Returns [] when the folder has no parent (it is already at root level).
+  Used exclusively by the vault breadcrumb (server fallback path for direct URL visits).
+  """
+  getVaultAncestors(folderId: ID!): [VaultFolder!]!
+
+  """
+  Batch-fetch presigned GET URLs for a list of fileIds.
+  Returns one result entry per fileId in the same order as the input.
+  Failed or deleted files return a non-null entry with status != ACTIVE.
+  
+  Max 50 fileIds per call.
+  """
+  getBatchDownloadUrls(fileIds: [ID!]!): [VaultBatchDownloadResult!]!
+
+  """Returns all Kanban columns for a project, ordered by position."""
+  getIssueStatuses(projectId: ID!): [IssueStatus!]!
+
+  """
+  Returns all issues for a project, sorted by priority (URGENT first)
+  then by position within each column.
+  Optional filters: assigneeId, labelIds, priority.
+  """
+  getProjectIssues(projectId: ID!, assigneeId: ID, labelIds: [ID!], priority: IssuePriority): [Issue!]!
+
+  """
+  Returns full detail for a single issue. Used when opening the issue modal.
+  """
+  getIssue(issueId: ID!): Issue!
+
+  """Returns all labels defined in a project."""
+  getIssueLabels(projectId: ID!): [IssueLabel!]!
+
+  """
+  Returns a short-lived presigned GET URL for reading an issue description from S3.
+  TTL: 5 minutes. Always request fresh — never cache.
+  """
+  getIssueDescriptionUrl(issueId: ID!): IssueDescriptionUrl!
+  activeContext(workspaceId: ID!, projectId: ID): ActiveUserContext!
+  featureFlags: [FeatureFlagRecord!]!
+  getBacklinks(targetEntityId: ID!, limit: Int, cursor: ID, filters: BacklinkFilters): BacklinkResult!
+  getMentions(sourceEntityId: ID!): [Mention!]!
+  getMentionEvents(mentionId: ID!): [MentionEvent!]!
+  getMentionsBySourceIds(sourceIds: [String!]!): [MentionResult!]!
+}
+
+type Mutation {
+  _health: String
+  syncUser(clerkId: String!, email: String!, fullName: String, avatarUrl: String, emailVerified: Boolean): User!
+  updateProfile(input: UpdateProfileInput!): User!
+  deleteAccount: Boolean!
+  updateGlobalNotifPrefs(input: UpdateGlobalNotifPrefsInput!): GlobalNotificationPreference!
+  setGlobalNotifMode(mode: GlobalNotifMode!): Boolean!
+  pauseNotifications(until: String!): Boolean!
+  resumeNotifications: Boolean!
+  declineWorkspaceInvite(input: DeclineWorkspaceInviteInput!): DeclineResponse!
+  acceptWorkspaceInvite(input: AcceptInviteInput!): JoinResponse!
+  checkSlugAvailability(slug: String!): AvailabilityResponse!
+  createOnboardingWorkspace: Workspace!
+  createWorkspace(slug: String!, name: String!): Workspace!
+  inviteToWorkspace(input: InviteToWorkspaceInput!): InviteResponse!
+  leaveWorkspace(workspaceId: ID!): Boolean!
+  cancelWorkspaceInvite(inviteId: ID!, workspaceId: ID!): Boolean!
+  resendWorkspaceInvite(inviteId: ID!, workspaceId: ID!): Boolean!
+  deleteWorkspace(workspaceId: ID!): Boolean!
+  transferWorkspaceOwnership(workspaceId: ID!, newOwnerId: ID!): WorkspaceMember!
+  removeWorkspaceMember(workspaceId: ID!, memberId: ID!): InviteResponse!
+  updateWorkspaceMemberRole(workspaceId: ID!, memberId: ID!, roleId: ID!): WorkspaceMember!
+  updateWorkspace(workspaceId: ID!, input: UpdateWorkspaceInput!): Workspace!
+  createWorkspaceRole(workspaceId: ID!, input: CreateWorkspaceRoleInput!): WorkspaceRole!
+  updateWorkspaceRole(roleId: ID!, workspaceId: ID!, input: UpdateWorkspaceRoleInput!): WorkspaceRole!
+  deleteWorkspaceRole(roleId: ID!, workspaceId: ID!): Boolean!
+  assignRolePermission(roleId: ID!, workspaceId: ID!, permissionId: ID!, effect: String, conditions: String): RolePermission!
+  removeRolePermission(roleId: ID!, workspaceId: ID!, permissionId: ID!): Boolean!
+  renameWorkspaceSlug(workspaceId: ID!, slug: String!): Workspace!
+  requestWorkspaceLogoUpload(workspaceId: ID!, mimeType: String!, sizeBytes: Int!): WorkspaceLogoUploadPayload!
+  updateWorkspaceNotifPrefs(workspaceId: String!, input: UpdateScopedPreferencesInput!): ScopedNotificationPreference!
+  muteWorkspace(workspaceId: String!, until: String): Boolean!
+  unmuteWorkspace(workspaceId: String!): Boolean!
+  markNotificationRead(ids: [ID!]!): Boolean!
+  markAllNotificationsRead: Boolean!
+  createProject(workspaceId: ID!, input: CreateProjectInput!): Project!
+  checkProjectSlugAvailability(workspaceId: ID!, slug: String!): AvailabilityResponse!
+  updateProject(projectId: ID!, input: UpdateProjectInput!): Project!
+  addProjectMember(projectId: ID!, workspaceId: ID!, userId: ID!, roleId: ID!): ProjectMember!
+  removeProjectMember(projectId: ID!, workspaceId: ID!, userId: ID!): Boolean!
+  updateProjectMemberRole(projectId: ID!, workspaceId: ID!, userId: ID!, roleId: ID!): ProjectMember!
+  archiveProject(projectId: ID!): Project!
+  unarchiveProject(projectId: ID!): Project!
+  deleteProject(projectId: ID!): Boolean!
+  leaveProject(projectId: ID!): Boolean!
+  createProjectRole(projectId: ID!, workspaceId: ID!, input: CreateProjectRoleInput!): ProjectRole!
+  updateProjectRole(roleId: ID!, projectId: ID!, workspaceId: ID!, input: UpdateProjectRoleInput!): ProjectRole!
+  deleteProjectRole(roleId: ID!, projectId: ID!, workspaceId: ID!): Boolean!
+  toggleProjectPlugin(projectId: ID!, workspaceId: ID!, type: String!, enable: Boolean!): Boolean!
+  requestProjectLogoUpload(projectId: ID!, mimeType: String!, sizeBytes: Int!): ProjectLogoUploadPayload!
+  updateProjectNotifPrefs(projectId: String!, input: UpdateScopedPreferencesInput!): ScopedNotificationPreference!
+  muteProject(projectId: String!, until: String): Boolean!
+  unmuteProject(projectId: String!): Boolean!
+  createChannel(input: CreateChannelInput!): Conversation!
+  archiveChannel(input: ArchiveChannelInput!): Conversation!
+  renameChannel(input: RenameChannelInput!): Conversation!
+  createThread(input: CreateThreadInput!): Conversation!
+  checkChannelAvailability(input: CheckChannelAvailabilityInput!): ChannelAvailabilityResponse!
+  createDm(input: CreateDmInput!): Conversation!
+  createGroup(input: CreateGroupInput!): Conversation!
+  deleteChannel(workspaceId: ID!, channelId: ID!): DeleteChannelResult!
+  unarchiveChannel(workspaceId: ID!, channelId: ID!): UnarchiveChannelResult!
+  updateChannelDescription(workspaceId: ID!, channelId: ID!, description: String): UpdateChannelDescriptionResult!
+  updateChannelVisibility(workspaceId: ID!, channelId: ID!, isPublic: Boolean!): UpdateChannelVisibilityResult!
+  addChannelMembers(workspaceId: ID!, channelId: ID!, userIds: [ID!]!): AddChannelMembersResult!
+  removeChannelMember(workspaceId: ID!, channelId: ID!, userId: ID!): RemoveChannelMemberResult!
+  deleteDm(workspaceId: ID!, dmId: ID!): DeleteDmResult!
+  muteConversation(conversationId: ID!, isMuted: Boolean!): MuteConversationResult!
+  renameGroup(workspaceId: ID!, groupId: ID!, name: String!): RenameGroupResult!
+  deleteGroup(workspaceId: ID!, groupId: ID!): DeleteGroupResult!
+  addGroupMembers(workspaceId: ID!, groupId: ID!, userIds: [ID!]!): AddGroupMembersResult!
+  removeGroupMember(workspaceId: ID!, groupId: ID!, userId: ID!): RemoveGroupMemberResult!
+  leaveGroup(workspaceId: ID!, groupId: ID!): LeaveGroupResult!
+  setConversationNotifMode(conversationId: String!, mode: ConversationNotifMode!, muteUntil: String): ConversationNotificationPreference!
+  closeThread(workspaceId: ID!, threadId: ID!): CloseThreadResult!
+  reopenThread(workspaceId: ID!, threadId: ID!): ReopenThreadResult!
+  deleteThread(workspaceId: ID!, threadId: ID!): DeleteThreadResult!
+  subscribeThread(threadId: ID!): SubscribeThreadResult!
+  unsubscribeThread(threadId: ID!): UnsubscribeThreadResult!
+  createBoard(input: CreateBoardInput!): BoardPayload!
+  deleteBoard(boardId: ID!): DeleteBoardResult!
+  renameBoard(boardId: ID!, title: String!): Whiteboard!
+  updateBoardDescription(boardId: ID!, description: String): Whiteboard!
+  addBoardCollaborators(boardId: ID!, userIds: [ID!]!): AddBoardCollaboratorsResult!
+  removeBoardCollaborator(boardId: ID!, userId: ID!): RemoveBoardCollaboratorResult!
+  archiveBoard(boardId: ID!): Whiteboard!
+  unarchiveBoard(boardId: ID!): Whiteboard!
+  lockBoard(boardId: ID!): Whiteboard!
+  unlockBoard(boardId: ID!): Whiteboard!
+
+  """
+  Creates a new page in a project. Initialises Y.Doc and uploads initial snapshot to S3.
+  The calling user is automatically added as an EDITOR collaborator.
+  """
+  createPage(input: CreatePageInput!): CreatePageResult!
+
+  """
+  Soft-deletes a page. Fails with 409 if the page has active subscribers.
+  Does not cascade to child pages — handle descendants explicitly first.
+  """
+  deletePage(input: DeletePageInput!): DeletePageResult!
+  renamePage(input: RenamePageInput!): RenamePageResult!
+
+  """Archives a page and all its descendants."""
+  archivePage(input: ArchivePageInput!): ArchivePageResult!
+
+  """
+  Unarchives a page. Fails if the parent is still archived.
+  Child pages are NOT automatically unarchived — handle each explicitly.
+  """
+  unarchivePage(input: UnarchivePageInput!): UnarchivePageResult!
+
+  """
+  Acquires an exclusive editor lock on the page.
+  Returns 423 if another user currently holds the lock.
+  Lock auto-releases after 1 hour (safety net for crashed clients).
+  """
+  lockPage(input: LockPageInput!): LockPageResult!
+
+  """Lock owner or workspace ADMIN can unlock."""
+  unlockPage(input: UnlockPageInput!): UnlockPageResult!
+
+  """
+  Moves a page to a new position (and optionally a new parent).
+  Validate no circular nesting before calling (circular guard runs server-side too).
+  """
+  reorderPage(input: ReorderPageInput!): ReorderPageResult!
+
+  """Upsert-semantics: can be used for both inviting and changing roles."""
+  addPageCollaborators(input: AddPageCollaboratorsInput!): AddPageCollaboratorsResult!
+
+  """Cannot remove the page creator."""
+  removePageCollaborator(input: RemovePageCollaboratorInput!): RemovePageCollaboratorResult!
+  updatePageDetails(input: UpdatePageDetailsInput!): UpdatePageDetailsResult!
+
+  """
+  Step 1 of 2 for uploading a file to Vault.
+  Checks quota, creates a PENDING VaultFile row, returns a presigned PUT URL.
+  The client must PUT the file directly to S3 using this URL, then call confirmVaultUpload.
+  """
+  requestVaultUpload(input: RequestVaultUploadInput!): RequestUploadResult!
+
+  """
+  Step 2 of 2 for uploading a file to Vault.
+  Verifies the S3 object (size + MIME), sets the file to ACTIVE, and updates storage usage.
+  """
+  confirmVaultUpload(input: ConfirmVaultUploadInput!): ConfirmUploadResult!
+
+  """
+  Register a file upload initiated outside the standard Vault UI flow.
+  Used by Chat (attachments), Pages/Issues (BlockNote uploadFile adapter),
+  and Whiteboard (Excalidraw onAddFile).
+  
+  Enforces storage quota before issuing the presigned URL.
+  Creates a PENDING VaultFile row. The caller must:
+    1. PUT bytes to presignedUrl
+    2. Call confirmVaultUpload(fileId) to activate
+  """
+  registerExternalFile(input: RegisterExternalFileInput!): RegisterExternalFileResult!
+  createVaultFolder(input: CreateVaultFolderInput!): CreateFolderResult!
+  renameVaultFolder(input: RenameVaultFolderInput!): RenameFolderResult!
+
+  """
+  Soft-deletes a folder.
+  cascade=false (default): returns error if folder is non-empty.
+  cascade=true: recursively soft-deletes all child folders and files.
+  """
+  deleteVaultFolder(input: DeleteVaultFolderInput!): DeleteResult!
+  moveVaultFolder(input: MoveVaultFolderInput!): MoveFolderResult!
+  moveVaultFile(input: MoveVaultFileInput!): MoveFileResult!
+
+  """
+  Renames a file. S3 key is unchanged — only the display name is updated.
+  """
+  renameVaultFile(input: RenameVaultFileInput!): RenameFileResult!
+
+  """Soft-deletes a vault file and releases its storage quota."""
+  deleteVaultFile(input: DeleteVaultFileInput!): DeleteResult!
+  pinVaultFolder(input: PinVaultFolderInput!): PinFolderResult!
+  unpinVaultFolder(input: UnpinVaultFolderInput!): DeleteResult!
+
+  """
+  Called by the editor on save when one or more vault://fileId references
+  have been removed from the document content since the last save.
+  
+  Does NOT delete files immediately — sets unrefAt for the cleanup job to
+  process after a grace period (default 30 min), preserving in-session undo.
+  """
+  markFilesUnreferenced(input: MarkFilesUnreferencedInput!): MarkFilesUnreferencedResult!
+  createIssue(input: CreateIssueInput!): CreateIssueResult!
+  updateIssue(input: UpdateIssueInput!): UpdateIssueResult!
+  deleteIssue(input: DeleteIssueInput!): DeleteResult!
+  moveIssueStatus(input: MoveIssueStatusInput!): MoveIssueStatusResult!
+  reorderIssue(input: ReorderIssueInput!): ReorderIssueResult!
+  createIssueStatus(input: CreateIssueStatusInput!): CreateIssueStatusResult!
+  updateIssueStatus(input: UpdateIssueStatusInput!): UpdateIssueStatusResult!
+  reorderIssueStatus(input: ReorderIssueStatusInput!): ReorderIssueStatusResult!
+  deleteIssueStatus(input: DeleteIssueStatusInput!): DeleteResult!
+  createIssueLabel(input: CreateIssueLabelInput!): CreateIssueLabelResult!
+  updateIssueLabel(input: UpdateIssueLabelInput!): UpdateIssueLabelResult!
+  deleteIssueLabel(input: DeleteIssueLabelInput!): DeleteResult!
+
+  """Step 1 of 2: reserves an S3 slot and returns a presigned PUT URL."""
+  requestIssueDescriptionUpload(input: RequestIssueDescriptionUploadInput!): RequestIssueDescriptionUploadResult!
+
+  """Step 2 of 2: verifies S3 upload and activates the description."""
+  confirmIssueDescriptionUpload(input: ConfirmIssueDescriptionUploadInput!): ConfirmIssueDescriptionUploadResult!
+  toggleFeatureFlag(input: ToggleFeatureFlagInput!): ToggleFlagResult!
+  createMentions(mentions: [CreateMentionInput!]!): [Mention!]!
+  updateMention(input: UpdateMentionInput!): Mention!
+  deleteMentions(mentionIds: [ID!]!): Boolean!
+  deleteMentionsBySource(sourceEntityId: ID!): Int!
+  orphanMentions(targetEntityId: ID!): Int!
+}
+
+input UpdateProfileInput {
+  fullName: String
+  avatarUrl: String
+  bio: String
+  timezone: String
+  language: String
+}
+
+input UpdateGlobalNotifPrefsInput {
+  emailEnabled: Boolean
+  pushEnabled: Boolean
+  globalMode: GlobalNotifMode
+  muteUntil: String
+  categories: [CategoryPreferenceInput!]
+}
+
+input DeclineWorkspaceInviteInput {
+  token: String!
+}
+
+type DeclineResponse {
+  success: Boolean!
+  message: String!
+}
+
+type User {
+  id: ID!
+  email: String!
+  fullName: String
+  avatarUrl: String
+  bio: String
+  timezone: String
+  language: String
+  status: String!
+  createdAt: String!
+  updatedAt: String!
+}
+
+type PublicUser {
+  id: ID!
+  fullName: String
+  avatarUrl: String
+  email: String!
+}
+
+type WorkspaceHomeEntry {
+  id: ID!
+  slug: String!
+  name: String!
+  logoUrl: String
+  memberRole: String!
+}
+
+type PendingInviteEntry {
+  id: ID!
+  token: String!
+  workspaceName: String!
+  role: String!
+}
+
+type UserHomeProfile {
+  id: ID!
+  fullName: String
+  avatarUrl: String
+  email: String!
+}
+
+type UserHomeData {
+  user: UserHomeProfile!
+  workspaces: [WorkspaceHomeEntry!]!
+  pendingInvites: [PendingInviteEntry!]!
+}
+
+type NotificationSummary {
+  globalMode: GlobalNotifMode!
+  emailEnabled: Boolean!
+  pushEnabled: Boolean!
+  isDndActive: Boolean!
+  dndUntil: DateTime
+  categories: [CategoryPreferenceSetting!]!
+}
+
+type Workspace {
+  id: ID!
+  slug: String!
+  name: String!
+  logoS3Key: String
+  logoUrl: String
+  domainWhitelist: String
+  memberRole: String
+  createdAt: String!
+  updatedAt: String!
+}
+
+type WorkspaceRole {
+  id: ID!
+  workspaceId: ID!
+  name: String!
+  description: String
+  scopeType: String!
+  isSystem: Boolean!
+  rank: Int!
+  createdAt: String!
+  updatedAt: String!
+}
+
+type Permission {
+  id: ID!
+  resource: String!
+  action: String!
+  description: String
+  module: String!
+}
+
+type RolePermission {
+  roleId: ID!
+  permissionId: ID!
+  effect: String!
+  conditions: String
+  permission: Permission!
+}
+
+input AcceptInviteInput {
+  token: String!
+  userId: String
+  userEmail: String
+}
+
+type JoinResponse {
+  success: Boolean!
+  message: String!
+  workspaceSlug: String!
+}
+
+type AvailabilityResponse {
+  available: Boolean!
+  message: String
+  reservationId: String
+  reason: String
+}
+
+input InviteToWorkspaceInput {
+  workspaceId: ID!
+  emails: [String!]!
+  roleId: ID!
+}
+
+type InviteResponse {
+  success: Boolean!
+  message: String!
+  invitedCount: Int!
+}
+
+input UpdateWorkspaceInput {
+  name: String
+  logoS3Key: String
+  domainWhitelist: String
+}
+
+input CreateWorkspaceRoleInput {
+  name: String!
+  description: String
+  rank: Int!
+}
+
+input UpdateWorkspaceRoleInput {
+  name: String
+  description: String
+  rank: Int
+}
+
+type WorkspaceLogoUploadPayload {
+  presignedUrl: String!
+
+  """The S3 key to store in Workspace.logoS3Key after PUT succeeds."""
+  logoS3Key: String!
+  expiresAt: String!
+}
+
+type WorkspaceInviteInfo {
+  workspaceName: String!
+  workspaceLogoUrl: String
+  inviterName: String
+}
+
+type OnboardingStatus {
+  hasUser: Boolean!
+  hasWorkspace: Boolean!
+  hasProject: Boolean!
+  workspaceSlug: String
+}
+
+type WorkspaceMember {
+  id: ID!
+  role: String!
+  roleId: ID!
+  roleRank: Int!
+  joinedAt: String!
+  user: User!
+}
+
+type WorkspaceInvite {
+  id: ID!
+  email: String!
+  role: String!
+  roleId: ID!
+  expiresAt: String!
+  createdAt: String!
+}
+
+type WorkspaceOverview {
+  totalProjects: Int!
+  totalMembers: Int!
+  totalIssues: Int!
+  totalPages: Int!
+  totalChannels: Int!
+  activeProjects: [WorkspaceOverviewProject!]!
+  recentMembers: [WorkspaceOverviewMember!]!
+  urgentIssues: [WorkspaceOverviewIssue!]!
+}
+
+type WorkspaceOverviewProject {
+  id: ID!
+  name: String!
+  key: String!
+  description: String
+  logoUrl: String
+  memberCount: Int!
+  openIssues: Int!
+  updatedAt: String!
+}
+
+type WorkspaceOverviewMember {
+  userId: ID!
+  fullName: String
+  email: String!
+  avatarUrl: String
+  roleName: String!
+  joinedAt: String!
+}
+
+type WorkspaceOverviewIssue {
+  id: ID!
+  number: Int!
+  title: String!
+  priority: String!
+  projectId: ID!
+  projectName: String!
+  projectKey: String!
+  assigneeId: ID
+  assigneeName: String
+  dueDate: String
+}
+
+enum NotificationCategory {
+  chat_messages
+  mentions
+  reactions
+  assignments
+  deadlines
+  access_changes
+  collaboration
+  system_admin
+}
+
+enum ConversationNotifMode {
+  ALL_MESSAGES
+  MENTIONS_ONLY
+  NOTHING
+}
+
+enum GlobalNotifMode {
+  ALL
+  MENTIONS_ONLY
+  NOTHING
+}
+
+type Notification {
+  id: ID!
+  recipientUserId: String!
+  actorId: String
+  entityType: String!
+  entityId: String!
+  category: String!
+  data: JSON!
+  isRead: Boolean!
+  isArchived: Boolean!
+  createdAt: DateTime!
+  workspaceId: String
+  projectId: String
+  actor: User
+  workspace: Workspace
+  project: Project
+}
+
+type NotificationEdge {
+  cursor: String!
+  node: Notification!
+}
+
+type NotificationConnection {
+  edges: [NotificationEdge!]!
+  pageInfo: PageInfo!
+}
+
+type CategoryPreferenceSetting {
+  category: NotificationCategory!
+  email: Boolean!
+  push: Boolean!
+  inApp: Boolean!
+}
+
+type GlobalNotificationPreference {
+  emailEnabled: Boolean!
+  pushEnabled: Boolean!
+  inAppEnabled: Boolean!
+  globalMode: GlobalNotifMode!
+  categories: [CategoryPreferenceSetting!]!
+}
+
+type ScopedNotificationPreference {
+  emailEnabled: Boolean
+  pushEnabled: Boolean
+  categories: [CategoryPreferenceSetting!]!
+}
+
+type ConversationNotificationPreference {
+  conversationId: String!
+  mode: ConversationNotifMode!
+  muteUntil: DateTime
+  pushEnabled: Boolean
+  emailEnabled: Boolean
+}
+
+input CategoryPreferenceInput {
+  category: NotificationCategory!
+  email: Boolean!
+  push: Boolean!
+  inApp: Boolean!
+}
+
+input UpdateScopedPreferencesInput {
+  emailEnabled: Boolean
+  pushEnabled: Boolean
+  categories: [CategoryPreferenceInput!]
+}
+
+type ProjectMember {
+  id: ID!
+  user: User!
+  userId: ID!
+  role: String
+  roleId: ID
+  joinedAt: String!
+}
+
+type Project {
+  id: ID!
+  workspaceId: String!
+  key: String!
+  name: String!
+  description: String
+  isPrivate: Boolean
+  isArchived: Boolean
+  logoS3Key: String
+  logoUrl: String
+  createdAt: String!
+  updatedAt: String!
+  members: [ProjectMember!]!
+  activePlugins: [String!]!
+}
+
+type ProjectRole {
+  id: ID!
+  projectId: ID
+  workspaceId: ID!
+  name: String!
+  description: String
+  scopeType: String!
+  isSystem: Boolean!
+  rank: Int!
+  createdAt: String!
+  updatedAt: String!
+}
+
+input CreateProjectInput {
+  name: String!
+  slug: String
+  description: String
+}
+
+input UpdateProjectInput {
+  name: String
+  description: String
+  isPrivate: Boolean
+  logoS3Key: String
+  key: String
+}
+
+input CreateProjectRoleInput {
+  name: String!
+  description: String
+  rank: Int!
+}
+
+input UpdateProjectRoleInput {
+  name: String
+  description: String
+  rank: Int
+}
+
+type ProjectLogoUploadPayload {
+  """The presigned S3 PUT URL the client uses to upload directly."""
+  presignedUrl: String!
+
+  """The S3 key to store in Project.logoS3Key after PUT succeeds."""
+  logoS3Key: String!
+
+  """ISO timestamp after which the presigned PUT URL expires."""
+  expiresAt: String!
+}
+
+type ProjectOverview {
+  totalIssues: Int!
+  openIssues: Int!
+  completedIssues: Int!
+  overdueIssues: Int!
+  pageCount: Int!
+  memberCount: Int!
+  issuesByStatus: [IssueStatusCount!]!
+  recentIssues: [OverviewIssue!]!
+  members: [OverviewMember!]!
+  issuesByPriority: [PriorityCount!]!
+  upcomingIssues: [UpcomingIssue!]!
+  recentPages: [PagePreview!]!
+  recentVaultFiles: [VaultFilePreview!]!
+  recentWhiteboards: [WhiteboardPreview!]!
+  vaultUsage: VaultUsageSummary!
+  projectChannels: [ChannelPreview!]!
+}
+
+type PriorityCount {
+  priority: String!
+  count: Int!
+}
+
+type UpcomingIssue {
+  id: ID!
+  number: Int!
+  title: String!
+  dueDate: String!
+  assigneeName: String
+  assigneeAvatar: String
+  statusName: String!
+  statusColor: String!
+}
+
+type PagePreview {
+  id: ID!
+  title: String!
+  emojiIcon: String
+  updatedAt: String!
+  createdByName: String
+}
+
+type VaultFilePreview {
+  id: ID!
+  name: String!
+  mimeType: String!
+  sizeBytes: Float!
+  createdByName: String
+  createdAt: String!
+}
+
+type WhiteboardPreview {
+  id: ID!
+  title: String!
+  elementCount: Int!
+  updatedAt: String!
+  isLocked: Boolean!
+}
+
+type VaultUsageSummary {
+  usedBytes: Float!
+  fileCount: Int!
+}
+
+type ChannelPreview {
+  id: ID!
+  name: String!
+  topic: String
+  updatedAt: String!
+}
+
+type IssueStatusCount {
+  statusId: ID!
+  name: String!
+  color: String!
+  icon: String
+  issueCount: Int!
+}
+
+type OverviewIssue {
+  id: ID!
+  number: Int!
+  title: String!
+  priority: String!
+  dueDate: String
+  updatedAt: String!
+  statusName: String!
+  statusColor: String!
+  assigneeId: ID
+  assigneeName: String
+  assigneeAvatar: String
+}
+
+type OverviewMember {
+  userId: ID!
+  name: String!
+  email: String!
+  avatarUrl: String
+  roleName: String
+  roleRank: Int
+  joinedAt: String!
+}
+
+type ContributorStats {
+  userId: ID!
+  name: String!
+  avatarUrl: String
+  assigned: Int!
+  completed: Int!
+}
+
+enum SearchEntityType {
+  PAGE
+  ISSUE
+  VAULT_FILE
+  VAULT_FOLDER
+  WHITEBOARD
+  USER
+}
+
+type SearchEntity {
+  id: ID!
+  type: SearchEntityType!
+  name: String!
+}
+
+type Conversation {
+  id: ID!
+  workspaceId: ID!
+  projectId: ID
+  type: ConversationType!
+  name: String
+  topic: String
+  isPublic: Boolean!
+  parentMessageId: ID
+  createdBy: ID
+  isArchived: Boolean!
+  unreadCount: Int!
+  memberCount: Int!
+  createdAt: DateTime!
+  updatedAt: DateTime!
+  deletedAt: DateTime
+  members: [ConversationMember!]
+  lastMessage: LastMessagePreview
+  myNotifMode: ConversationNotifMode
+  isMuted: Boolean!
+}
+
+enum ConversationType {
+  CHANNEL
+  DM
+  GROUP_DM
+  THREAD
+}
+
+type ConversationMember {
+  userId: ID!
+  role: String!
+  isMuted: Boolean!
+  joinedAt: DateTime!
+  user: UserBasic!
+}
+
+type UserBasic {
+  id: ID!
+  fullName: String!
+  email: String!
+  avatarUrl: String
+}
+
+type LastMessagePreview {
+  id: ID!
+  content: JSON!
+  authorUserId: ID!
+  createdAt: DateTime!
+}
+
+type ChatMemberRecord {
+  id: ID!
+  conversationId: ID!
+  userId: ID!
+  lastReadMsgId: ID
+  lastDeliveredMsgId: ID
+  role: String!
+  isMuted: Boolean!
+  joinedAt: DateTime!
+}
+
+type ChatMessage {
+  id: ID!
+  conversationId: ID!
+  authorUserId: ID!
+  content: JSON!
+  type: String!
+  streamId: String!
+  sequence: Int!
+  createdAt: DateTime!
+  parentMessageId: ID
+  replyCount: Int!
+  isEdited: Boolean!
+  editedAt: DateTime
+  metadata: JSON
+  deletedAt: DateTime
+}
+
+type MessageReaction {
+  emoji: String!
+  count: Int!
+  hasReacted: Boolean!
+  recentUsers: [User!]!
+}
+
+type ReactionUsersConnection {
+  users: [User!]!
+  nextCursor: Int
+}
+
+type UserPresence {
+  userId: ID!
+  status: PresenceStatus!
+  lastActiveAt: DateTime
+}
+
+enum PresenceStatus {
+  ONLINE
+  AWAY
+  OFFLINE
+}
+
+input CreateChannelInput {
+  workspaceId: ID!
+  projectId: ID
+  name: String
+  topic: String
+  type: ConversationType
+  memberUserIds: [ID!]
+}
+
+input ArchiveChannelInput {
+  channelId: ID!
+}
+
+input RenameChannelInput {
+  channelId: ID!
+  name: String!
+}
+
+input CreateThreadInput {
+  workspaceId: ID!
+  projectId: ID!
+  conversationId: ID!
+  messageId: ID!
+}
+
+input CheckChannelAvailabilityInput {
+  projectId: ID!
+  slug: String!
+}
+
+type ChannelAvailabilityResponse {
+  available: Boolean!
+  message: String
+  reason: String
+  reservationId: String
+}
+
+input CreateDmInput {
+  workspaceId: ID!
+  projectId: ID!
+  recipientUserId: ID!
+}
+
+input CreateGroupInput {
+  workspaceId: ID!
+  projectId: ID!
+  name: String!
+  memberUserIds: [ID!]!
+}
+
+type DeleteChannelResult {
+  success: Boolean!
+  channelId: ID!
+}
+
+type UnarchiveChannelResult {
+  success: Boolean!
+  channelId: ID!
+  name: String!
+}
+
+type UpdateChannelDescriptionResult {
+  success: Boolean!
+  channelId: ID!
+  description: String
+}
+
+type UpdateChannelVisibilityResult {
+  success: Boolean!
+  channelId: ID!
+  isPublic: Boolean!
+}
+
+type AddChannelMembersResult {
+  success: Boolean!
+  addedCount: Int!
+  skippedCount: Int!
+  members: [ChannelMemberInfo!]!
+}
+
+type ChannelMemberInfo {
+  userId: ID!
+  user: UserBasic!
+}
+
+type RemoveChannelMemberResult {
+  success: Boolean!
+  channelId: ID!
+  userId: ID!
+}
+
+type DeleteDmResult {
+  success: Boolean!
+  dmId: ID!
+}
+
+type MuteConversationResult {
+  success: Boolean!
+  conversationId: ID!
+  isMuted: Boolean!
+}
+
+type RenameGroupResult {
+  success: Boolean!
+  groupId: ID!
+  name: String!
+}
+
+type DeleteGroupResult {
+  success: Boolean!
+  groupId: ID!
+}
+
+type AddGroupMembersResult {
+  success: Boolean!
+  addedCount: Int!
+  skippedCount: Int!
+  members: [GroupMemberInfo!]!
+}
+
+type GroupMemberInfo {
+  userId: ID!
+  user: UserBasic!
+}
+
+type RemoveGroupMemberResult {
+  success: Boolean!
+  groupId: ID!
+  userId: ID!
+}
+
+type LeaveGroupResult {
+  success: Boolean!
+  groupId: ID!
+}
+
+type CloseThreadResult {
+  success: Boolean!
+  threadId: ID!
+  closedAt: DateTime!
+}
+
+type ReopenThreadResult {
+  success: Boolean!
+  threadId: ID!
+}
+
+type DeleteThreadResult {
+  success: Boolean!
+  threadId: ID!
+}
+
+type SubscribeThreadResult {
+  success: Boolean!
+  threadId: ID!
+  isSubscribed: Boolean!
+}
+
+type UnsubscribeThreadResult {
+  success: Boolean!
+  threadId: ID!
+  isSubscribed: Boolean!
+}
+
+type MessagesDelta {
+  messages: [ChatMessage!]!
+  hasMore: Boolean!
+  lastSequence: Int!
+}
+
+type HistoryPayload {
+  messages: [ChatMessage!]!
+  hasMore: Boolean!
+  minSequence: Int
+}
+
+type UnreadCountsResponse {
+  conversations: [ConversationUnreadCount!]!
+}
+
+type ConversationUnreadCount {
+  conversationId: ID!
+  unreadCount: Int!
+  lastUnreadMessageId: ID
+}
+
+type ReadReceiptsResponse {
+  readBy: [ReadReceiptUser!]!
+  totalReads: Int!
+  totalMembers: Int!
+}
+
+type ReadReceiptUser {
+  userId: ID!
+  username: String!
+  avatarUrl: String
+}
+
+type ConversationConnection {
+  edges: [Conversation!]!
+  pageInfo: PageInfo!
+}
+
+type DmConversation {
+  id: ID!
+  workspaceId: ID!
+  projectId: ID!
+  type: ConversationType!
+  memberCount: Int!
+  members: [DmMember!]!
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+type DmMember {
+  userId: ID!
+  user: UserBasic!
+}
+
+"""
+A 1:1 DM conversation with the other participant's profile resolved.
+The caller's own userId must be used to identify 'otherUser' on the client.
+"""
+type ProjectDmItem {
+  id: ID!
+  otherUser: DmUserProfile!
+  unreadCount: Int!
+  updatedAt: DateTime!
+}
+
+type DmUserProfile {
+  id: ID!
+  fullName: String!
+  email: String
+  avatarUrl: String
+}
+
+type Whiteboard {
+  id: ID!
+  workspaceId: ID!
+  projectId: ID
+  title: String!
+  description: String
+  elementCount: Int!
+  fileSizeBytes: String!
+  isArchived: Boolean!
+  isLocked: Boolean!
+  createdBy: ID!
+  createdAt: DateTime!
+  updatedAt: DateTime!
+  deletedAt: DateTime
+  collaborators: [BoardCollaborator!]
+  creator: UserBasic!
+}
+
+type BoardCollaborator {
+  userId: ID!
+  joinedAt: DateTime!
+  user: UserBasic!
+}
+
+input CreateBoardInput {
+  workspaceId: ID!
+  projectId: ID
+  title: String!
+  description: String
+
+  """Optional: Add workspace members as collaborators during board creation"""
+  collaboratorIds: [ID!]
+}
+
+type BoardPayload {
+  board: Whiteboard!
+
+  """
+  Collaborators that were successfully added (may be fewer than requested if some failed validation)
+  """
+  addedCollaborators: [BoardCollaborator!]!
+}
+
+type DeleteBoardResult {
+  success: Boolean!
+  boardId: ID!
+}
+
+type AddBoardCollaboratorsResult {
+  success: Boolean!
+  addedCount: Int!
+  skippedCount: Int!
+}
+
+type RemoveBoardCollaboratorResult {
+  success: Boolean!
+}
+
+type BoardConnection {
+  boards: [Whiteboard!]!
+  nextCursor: ID
+}
+
+type BoardSnapshot {
+  boardId: ID!
+  snapshot: String!
+  lastStreamId: String
+  snapshotTimestamp: DateTime
+}
+
+type CursorPosition {
+  x: Float!
+  y: Float!
+}
+
+type ActiveCollaborator {
+  userId: ID!
+  connectionId: ID!
+  joinedAt: DateTime!
+  lastSeenAt: DateTime!
+  cursorPosition: CursorPosition
+}
+
+"""
+A collaborative document page within a project.
+The Y.Doc content is synced via WebSocket and accessed via getPageSnapshot.
+"""
+type Page {
+  id: ID!
+  workspaceId: ID!
+  projectId: ID!
+
+  """null = root-level page (no parent)"""
+  parentId: ID
+  title: String!
+
+  """Emoji or absolute URL for the page icon"""
+  icon: String
+  coverUrl: String
+
+  """
+  Fractional index position for ordering within parent (e.g., 1.5 between 1.0 and 2.0)
+  """
+  position: Float!
+  isArchived: Boolean!
+  isLocked: Boolean!
+
+  """
+  S3 key for the latest compiled Yjs snapshot (disaster recovery reference)
+  """
+  s3Key: String
+  createdBy: ID!
+  createdAt: DateTime!
+  updatedAt: DateTime!
+  collaborators: [PageCollaborator!]!
+  creator: UserBasic!
+
+  """Populated only by getProjectPages — empty in all other contexts"""
+  children: [Page!]!
+}
+
+type PageCollaborator {
+  userId: ID!
+  role: PageRole!
+  joinedAt: DateTime!
+  user: UserBasic!
+}
+
+enum PageRole {
+  EDITOR
+  VIEWER
+  COMMENTER
+}
+
+"""
+Returned by getPageSnapshot — everything the client needs to initialise the Y.Doc
+"""
+type GetPageSnapshotResult {
+  pageId: ID!
+
+  """
+  base64-encoded Y.encodeStateAsUpdate() — apply on client with Y.applyUpdate()
+  """
+  snapshot: String!
+
+  """
+  Last Redis Stream entry ID processed into this snapshot — used for gap-fill on subscribe
+  """
+  lastStreamId: String!
+
+  """Unix timestamp (ms) of when this snapshot was compiled"""
+  snapshotTimestamp: Float!
+}
+
+input CreatePageInput {
+  workspaceId: ID!
+  projectId: ID!
+
+  """null = root-level page"""
+  parentId: ID
+  title: String
+  icon: String
+  coverUrl: String
+
+  """Fractional index position for sibling ordering"""
+  position: Float!
+  collaboratorIds: [ID!]
+}
+
+type CreatePageResult {
+  page: Page!
+}
+
+input DeletePageInput {
+  pageId: ID!
+  workspaceId: ID!
+}
+
+type DeletePageResult {
+  success: Boolean!
+  pageId: ID!
+}
+
+input RenamePageInput {
+  pageId: ID!
+  title: String!
+}
+
+type RenamePageResult {
+  page: Page!
+}
+
+input ArchivePageInput {
+  pageId: ID!
+}
+
+type ArchivePageResult {
+  page: Page!
+}
+
+input UnarchivePageInput {
+  pageId: ID!
+}
+
+type UnarchivePageResult {
+  page: Page!
+}
+
+input LockPageInput {
+  pageId: ID!
+}
+
+type LockPageResult {
+  page: Page!
+}
+
+input UnlockPageInput {
+  pageId: ID!
+}
+
+type UnlockPageResult {
+  page: Page!
+}
+
+input ReorderPageInput {
+  pageId: ID!
+
+  """null = move to root (remove from parent)"""
+  newParentId: ID
+  newPosition: Float!
+}
+
+type ReorderPageResult {
+  page: Page!
+}
+
+input AddPageCollaboratorsInput {
+  pageId: ID!
+  collaborators: [PageCollaboratorInput!]!
+}
+
+input PageCollaboratorInput {
+  userId: ID!
+  role: PageRole!
+}
+
+type AddPageCollaboratorsResult {
+  addedCollaborators: [PageCollaborator!]!
+}
+
+input RemovePageCollaboratorInput {
+  pageId: ID!
+  userId: ID!
+}
+
+type RemovePageCollaboratorResult {
+  success: Boolean!
+}
+
+input UpdatePageDetailsInput {
+  pageId: ID!
+
+  """Emoji character to set as the page icon. Pass null to remove."""
+  emoji: String
+
+  """Permanent vault proxy URL for the cover image. Pass null to remove."""
+  coverImageUrl: String
+}
+
+type UpdatePageDetailsResult {
+  page: Page!
+}
+
+"""
+Returned by getPageSnapshot.
+
+snapshot         — base64 Y.js diff. Client calls Y.applyUpdate(localDoc, decode(snapshot)).
+lastStreamId     — client passes this to subscribe-page for gap-fill replay.
+snapshotTimestamp — when the base snapshot was last compacted by the stream worker. Null for new pages.
+"""
+type PageSnapshot {
+  snapshot: String!
+  lastStreamId: String!
+  snapshotTimestamp: DateTime
+}
+
+type PageHomeItem {
+  id: ID!
+  title: String!
+  emojiIcon: String
+  updatedAt: String!
+  createdByName: String
+}
+
+type PagesHomeResult {
+  pages: [PageHomeItem!]!
+}
+
+enum VaultNodeType {
+  FOLDER
+  FILE
+}
+
+enum VaultSortField {
+  NAME
+  CREATED_AT
+  SIZE
+  TYPE
+}
+
+enum VaultFileSource {
+  VAULT
+  PAGE
+  CHAT
+  WHITEBOARD
+  TASK
+}
+
+enum SortDirection {
+  ASC
+  DESC
+}
+
+type VaultFolder {
+  id: ID!
+  projectId: ID!
+  parentFolderId: ID
+  name: String!
+  isSystem: Boolean!
+  createdAt: DateTime!
+  updatedAt: DateTime!
+  deletedAt: DateTime
+}
+
+type VaultFile {
+  id: ID!
+  workspaceId: ID!
+  projectId: ID!
+  folderId: ID
+  uploaderUserId: ID
+  name: String!
+  mimeType: String!
+
+  """File size in bytes (Float to safely represent large files >2GB)"""
+  sizeBytes: Float!
+  s3Key: String!
+  status: String!
+  source: VaultFileSource!
+  sourceId: ID
+  confirmedAt: DateTime
+  createdAt: DateTime!
+  updatedAt: DateTime!
+  deletedAt: DateTime
+  uploader: VaultUploader
+}
+
+type VaultUploader {
+  id: ID!
+  fullName: String
+  avatarUrl: String
+}
+
+type VaultChildrenResult {
+  folders: [VaultFolder!]!
+  files: [VaultFile!]!
+  totalFileCount: Int!
+  hasNextPage: Boolean!
+  nextCursor: ID
+}
+
+union VaultNode = VaultFolder | VaultFile
+
+type VaultSidebar {
+  pinnedFolders: [VaultFolder!]!
+  systemFolders: [VaultFolder!]!
+}
+
+type VaultDownloadUrl {
+  url: String!
+  expiresAt: DateTime
+}
+
+type VaultUsage {
+  projectUsedBytes: Float!
+  projectReservedBytes: Float!
+  projectLimitBytes: Float!
+  projectFileCount: Int!
+  projectFileCountLimit: Int!
+  workspaceUsedBytes: Float!
+  workspaceReservedBytes: Float!
+  workspaceLimitBytes: Float!
+  workspaceFileCount: Int!
+  workspaceFileCountLimit: Int!
+  percentUsed: Float!
+}
+
+"""Generic success/id response for delete operations"""
+type DeleteResult {
+  success: Boolean!
+  id: ID!
+}
+
+"""
+Result entry for a single file in a batch download URL request.
+Clients must check status before using the url.
+"""
+type VaultBatchDownloadResult {
+  fileId: ID!
+
+  """Presigned GET URL valid for 1 hour. Null when status != ACTIVE."""
+  url: String
+
+  """
+  ACTIVE    — url is valid, render normally
+  DELETED   — file was removed; render tombstone ("Attachment deleted")
+  PENDING   — upload not yet confirmed; render placeholder
+  FORBIDDEN — caller is not a member of this file's project
+  """
+  status: String!
+  name: String!
+  mimeType: String!
+  sizeBytes: Float!
+}
+
+input RequestVaultUploadInput {
+  projectId: ID!
+  workspaceId: ID!
+
+  """null = upload to Home (root level)"""
+  folderId: ID
+  name: String!
+  mimeType: String!
+  sizeBytes: Int!
+}
+
+type RequestUploadResult {
+  fileId: ID!
+  presignedUrl: String!
+  expiresAt: DateTime!
+}
+
+input ConfirmVaultUploadInput {
+  fileId: ID!
+}
+
+type ConfirmUploadResult {
+  file: VaultFile!
+}
+
+input RegisterExternalFileInput {
+  workspaceId: ID!
+  projectId: ID!
+
+  """
+  Which module is uploading the file. Determines the system folder it lands in.
+  """
+  source: VaultFileSource!
+
+  """
+  ID of the originating entity (conversationId, pageId, boardId, issueId).
+  Nullable — may not yet exist when uploading before the entity is created.
+  """
+  sourceId: ID
+  name: String!
+  mimeType: String!
+
+  """
+  File size in bytes. Use Float to stay JS-safe (no BigInt serialisation issues).
+  """
+  sizeBytes: Float!
+
+  """
+  Optional override folder. Defaults to the source module's system folder.
+  """
+  folderId: ID
+}
+
+"""
+Returned by registerExternalFile and requestVaultUpload.
+The client must PUT the file bytes to presignedUrl, then call confirmVaultUpload.
+"""
+type RegisterExternalFileResult {
+  fileId: ID!
+  presignedUrl: String!
+  expiresAt: DateTime!
+}
+
+input CreateVaultFolderInput {
+  projectId: ID!
+
+  """null = create at root level (Home)"""
+  parentFolderId: ID
+  name: String!
+}
+
+type CreateFolderResult {
+  folder: VaultFolder!
+}
+
+input RenameVaultFolderInput {
+  folderId: ID!
+  name: String!
+}
+
+type RenameFolderResult {
+  folder: VaultFolder!
+}
+
+input DeleteVaultFolderInput {
+  folderId: ID!
+  cascade: Boolean
+}
+
+input MoveVaultFolderInput {
+  folderId: ID!
+
+  """null = move to root (Home)"""
+  targetParentFolderId: ID
+}
+
+type MoveFolderResult {
+  folder: VaultFolder!
+}
+
+input MoveVaultFileInput {
+  fileId: ID!
+
+  """null = move to root (Home)"""
+  targetFolderId: ID
+}
+
+type MoveFileResult {
+  file: VaultFile!
+}
+
+input RenameVaultFileInput {
+  fileId: ID!
+  name: String!
+}
+
+type RenameFileResult {
+  file: VaultFile!
+}
+
+input DeleteVaultFileInput {
+  fileId: ID!
+}
+
+input PinVaultFolderInput {
+  projectId: ID!
+  folderId: ID!
+}
+
+type PinFolderResult {
+  folder: VaultFolder!
+}
+
+input UnpinVaultFolderInput {
+  folderId: ID!
+}
+
+input MarkFilesUnreferencedInput {
+  """File IDs that are no longer present in the saved document content."""
+  fileIds: [ID!]!
+
+  """The entity (page or issue) whose save triggered this mark."""
+  entityId: ID!
+
+  """The entity type — PAGE or TASK."""
+  entityType: VaultFileSource!
+}
+
+type MarkFilesUnreferencedResult {
+  """Number of files successfully marked unreferenced."""
+  markedCount: Int!
+}
+
+type IssueStatus {
+  id: ID!
+  projectId: ID!
+  name: String!
+  color: String!
+  icon: String
+  position: Float!
+  isSystem: Boolean!
+  issueCount: Int!
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+enum IssuePriority {
+  URGENT
+  HIGH
+  MEDIUM
+  LOW
+  NO_PRIORITY
+}
+
+type Issue {
+  id: ID!
+  projectId: ID!
+  workspaceId: ID!
+  number: Int!
+  title: String!
+  descriptionS3Key: String
+  status: IssueStatus!
+  priority: IssuePriority!
+  position: Float!
+  assignee: IssueUser
+  labels: [IssueLabel!]!
+  dueDate: DateTime
+  createdBy: IssueUser!
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+type IssueUser {
+  id: ID!
+  fullName: String
+  avatarUrl: String
+}
+
+type IssueLabel {
+  id: ID!
+  projectId: ID!
+  name: String!
+  color: String!
+  createdAt: DateTime!
+}
+
+type IssueDescriptionUrl {
+  url: String!
+  expiresAt: DateTime!
+}
+
+input CreateIssueInput {
+  projectId: ID!
+  statusId: ID!
+  title: String!
+  priority: IssuePriority
+  assigneeId: ID
+  labelIds: [ID!]
+  dueDate: DateTime
+}
+
+type CreateIssueResult {
+  issue: Issue!
+}
+
+input UpdateIssueInput {
+  issueId: ID!
+  title: String
+  statusId: ID
+  priority: IssuePriority
+  assigneeId: ID
+  labelIds: [ID!]
+  dueDate: DateTime
+}
+
+type UpdateIssueResult {
+  issue: Issue!
+}
+
+input DeleteIssueInput {
+  issueId: ID!
+}
+
+input MoveIssueStatusInput {
+  issueId: ID!
+  statusId: ID!
+  newPosition: Float
+}
+
+type MoveIssueStatusResult {
+  issue: Issue!
+}
+
+input ReorderIssueInput {
+  issueId: ID!
+  newPosition: Float!
+}
+
+type ReorderIssueResult {
+  issue: Issue!
+}
+
+input CreateIssueStatusInput {
+  projectId: ID!
+  name: String!
+  color: String
+  icon: String
+}
+
+type CreateIssueStatusResult {
+  status: IssueStatus!
+}
+
+input UpdateIssueStatusInput {
+  statusId: ID!
+  name: String
+  color: String
+  icon: String
+}
+
+type UpdateIssueStatusResult {
+  status: IssueStatus!
+}
+
+input ReorderIssueStatusInput {
+  statusId: ID!
+  newPosition: Float!
+}
+
+type ReorderIssueStatusResult {
+  status: IssueStatus!
+}
+
+input DeleteIssueStatusInput {
+  statusId: ID!
+}
+
+input CreateIssueLabelInput {
+  projectId: ID!
+  name: String!
+  color: String
+}
+
+type CreateIssueLabelResult {
+  label: IssueLabel!
+}
+
+input UpdateIssueLabelInput {
+  labelId: ID!
+  name: String
+  color: String
+}
+
+type UpdateIssueLabelResult {
+  label: IssueLabel!
+}
+
+input DeleteIssueLabelInput {
+  labelId: ID!
+}
+
+input RequestIssueDescriptionUploadInput {
+  issueId: ID!
+  sizeBytes: Int!
+}
+
+type RequestIssueDescriptionUploadResult {
+  presignedUrl: String!
+  descriptionFileId: ID!
+  expiresAt: DateTime!
+}
+
+input ConfirmIssueDescriptionUploadInput {
+  descriptionFileId: ID!
+}
+
+type ConfirmIssueDescriptionUploadResult {
+  issue: Issue!
+}
+
+type ActiveUserContext {
+  userId: ID!
+  workspaceId: ID!
+  projectId: ID
+  workspaceRole: String
+  projectRole: String
+  grantedPermissions: [String!]!
+  featureFlags: [ActiveFeatureFlag!]!
+}
+
+type ActiveFeatureFlag {
+  key: String!
+  enabled: Boolean!
+}
+
+type FeatureFlagRecord {
+  id: ID!
+  key: String!
+  defaultEnabled: Boolean!
+  description: String
+  overrides: [FlagOverrideRecord!]!
+}
+
+type FlagOverrideRecord {
+  id: ID!
+  contextType: FlagContextType!
+  contextId: ID
+  enabled: Boolean!
+}
+
+input ToggleFeatureFlagInput {
+  flagKey: String!
+  contextType: FlagContextType!
+  contextId: ID
+  enabled: Boolean!
+}
+
+enum FlagContextType {
+  GLOBAL
+  WORKSPACE
+  PROJECT
+  USER
+}
+
+type ToggleFlagResult {
+  success: Boolean!
+  flagKey: String!
+  enabled: Boolean!
+}
+
+input BacklinkFilters {
+  sourceType: String
+  actorId: String
+  dateFrom: DateTime
+  dateTo: DateTime
+}
+
+type Backlink {
+  id: ID!
+  sourceEntityId: String!
+  sourceEntityType: String!
+  targetEntityId: String!
+  targetEntityType: String!
+  context: String
+  createdAt: DateTime!
+  sourceMention: Mention!
+}
+
+type BacklinkResult {
+  backlinks: [Backlink!]!
+  total: Int!
+  hasMore: Boolean!
+}
+
+type Mention {
+  id: ID!
+  sourceEntityId: String!
+  sourceEntityType: String!
+  targetEntityId: String!
+  targetEntityType: String!
+  displayText: String!
+  sourceLocation: JSON
+  tier: MentionTier!
+  status: MentionStatus!
+  createdAt: DateTime!
+  createdById: String!
+}
+
+enum MentionTier {
+  TIER_1
+  TIER_2
+  TIER_3
+}
+
+enum MentionStatus {
+  ACTIVE
+  ORPHANED
+  REMOVED
+}
+
+type MentionEvent {
+  id: ID!
+  mentionId: String!
+  eventType: String!
+  payload: JSON!
+  actorId: String
+  createdAt: DateTime!
+}
+
+type MentionResult {
+  sourceId: String!
+  mentions: [SourceMention!]!
+}
+
+type SourceMention {
+  id: ID!
+  targetEntityId: String!
+  targetEntityType: String!
+  displayText: String!
+}
+
+input CreateMentionInput {
+  sourceEntityId: ID!
+  sourceEntityType: String!
+  targetEntityId: ID!
+  targetEntityType: String!
+  displayText: String!
+  sourceLocation: JSON
+}
+
+input UpdateMentionInput {
+  mentionId: ID!
+  displayText: String
+  sourceLocation: JSON
+}

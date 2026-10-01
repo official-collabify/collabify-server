@@ -3,7 +3,7 @@ import { printSchema } from "graphql";
 import * as fs from "fs";
 import * as path from "path";
 
-const SCHEMA_PATH = path.join(__dirname, "../../schema.graphql");
+const SCHEMA_PATH = path.join(__dirname, "../schema.graphql");
 
 const run = () => {
   try {

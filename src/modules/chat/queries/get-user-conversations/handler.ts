@@ -63,6 +63,7 @@ export const handler = async (
           parentMessageId: conv.parentMessageId,
           createdBy: null,
           isArchived: conv.isArchived,
+          isMuted: false,
           memberCount: conv.members.length,
           unreadCount,
           members: [],

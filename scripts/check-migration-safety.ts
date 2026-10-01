@@ -129,8 +129,10 @@ export function scanMigrationsDirectory(
 // ─────────────────────────────────────────────────────────────────────────────
 // CLI Runner
 // ─────────────────────────────────────────────────────────────────────────────
+// @ts-ignore — Bun-specific CLI execution
 if (import.meta.main) {
   const checkAll = process.argv.includes("--all");
+  // @ts-ignore — Bun-specific directory resolution
   const migrationsDir = resolve(import.meta.dir, "../prisma/migrations");
 
   console.log(`🔎 Scanning Prisma migrations in ${migrationsDir}...`);
