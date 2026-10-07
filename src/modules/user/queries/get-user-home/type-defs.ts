@@ -5,6 +5,7 @@ export const getUserHomeTypeDefs = `
     name: String!
     logoUrl: String
     memberRole: String!
+    lastActiveProjectId: String
   }
 
   type PendingInviteEntry {

@@ -20,6 +20,7 @@ import {
   renameWorkspaceSlugTypeDefs,
   requestWorkspaceLogoUploadTypeDefs,
   updateWorkspaceNotifPrefsTypeDefs,
+  recordWorkspaceAccessTypeDefs,
 } from "../services";
 
 import {
@@ -102,6 +103,7 @@ export const typeDefs = [
   renameWorkspaceSlugTypeDefs,
   requestWorkspaceLogoUploadTypeDefs,
   updateWorkspaceNotifPrefsTypeDefs,
+  recordWorkspaceAccessTypeDefs,
 
   // Queries
   getInviteInfoTypeDefs,

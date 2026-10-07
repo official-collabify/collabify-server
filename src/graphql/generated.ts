@@ -976,6 +976,7 @@ export type Mutation = {
   orphanMentions: Scalars['Int']['output'];
   pauseNotifications: Scalars['Boolean']['output'];
   pinVaultFolder: PinFolderResult;
+  recordWorkspaceAccess: RecordWorkspaceAccessPayload;
   /**
    * Register a file upload initiated outside the standard Vault UI flow.
    * Used by Chat (attachments), Pages/Issues (BlockNote uploadFile adapter),
@@ -1434,6 +1435,12 @@ export type MutationPauseNotificationsArgs = {
 
 export type MutationPinVaultFolderArgs = {
   input: PinVaultFolderInput;
+};
+
+
+export type MutationRecordWorkspaceAccessArgs = {
+  projectSlug?: InputMaybe<Scalars['String']['input']>;
+  workspaceSlug: Scalars['String']['input'];
 };
 
 
@@ -2652,6 +2659,14 @@ export type ReadReceiptsResponse = {
   totalReads: Scalars['Int']['output'];
 };
 
+export type RecordWorkspaceAccessPayload = {
+  __typename?: 'RecordWorkspaceAccessPayload';
+  lastAccessedAt: Scalars['String']['output'];
+  projectSlug?: Maybe<Scalars['String']['output']>;
+  success: Scalars['Boolean']['output'];
+  workspaceSlug: Scalars['String']['output'];
+};
+
 export type RegisterExternalFileInput = {
   /** Optional override folder. Defaults to the source module's system folder. */
   folderId?: InputMaybe<Scalars['ID']['input']>;
@@ -3281,6 +3296,7 @@ export type Workspace = {
 export type WorkspaceHomeEntry = {
   __typename?: 'WorkspaceHomeEntry';
   id: Scalars['ID']['output'];
+  lastActiveProjectId?: Maybe<Scalars['String']['output']>;
   logoUrl?: Maybe<Scalars['String']['output']>;
   memberRole: Scalars['String']['output'];
   name: Scalars['String']['output'];
@@ -3622,6 +3638,7 @@ export type ResolversTypes = ResolversObject<{
   ReactionUsersConnection: ResolverTypeWrapper<Omit<ReactionUsersConnection, 'users'> & { users: Array<ResolversTypes['User']> }>;
   ReadReceiptUser: ResolverTypeWrapper<ReadReceiptUser>;
   ReadReceiptsResponse: ResolverTypeWrapper<ReadReceiptsResponse>;
+  RecordWorkspaceAccessPayload: ResolverTypeWrapper<RecordWorkspaceAccessPayload>;
   RegisterExternalFileInput: RegisterExternalFileInput;
   RegisterExternalFileResult: ResolverTypeWrapper<RegisterExternalFileResult>;
   RemoveBoardCollaboratorResult: ResolverTypeWrapper<RemoveBoardCollaboratorResult>;
@@ -3869,6 +3886,7 @@ export type ResolversParentTypes = ResolversObject<{
   ReactionUsersConnection: Omit<ReactionUsersConnection, 'users'> & { users: Array<ResolversParentTypes['User']> };
   ReadReceiptUser: ReadReceiptUser;
   ReadReceiptsResponse: ReadReceiptsResponse;
+  RecordWorkspaceAccessPayload: RecordWorkspaceAccessPayload;
   RegisterExternalFileInput: RegisterExternalFileInput;
   RegisterExternalFileResult: RegisterExternalFileResult;
   RemoveBoardCollaboratorResult: RemoveBoardCollaboratorResult;
@@ -4537,6 +4555,7 @@ export type MutationResolvers<ContextType = ServiceContext, ParentType extends R
   orphanMentions?: Resolver<ResolversTypes['Int'], ParentType, ContextType, RequireFields<MutationOrphanMentionsArgs, 'targetEntityId'>>;
   pauseNotifications?: Resolver<ResolversTypes['Boolean'], ParentType, ContextType, RequireFields<MutationPauseNotificationsArgs, 'until'>>;
   pinVaultFolder?: Resolver<ResolversTypes['PinFolderResult'], ParentType, ContextType, RequireFields<MutationPinVaultFolderArgs, 'input'>>;
+  recordWorkspaceAccess?: Resolver<ResolversTypes['RecordWorkspaceAccessPayload'], ParentType, ContextType, RequireFields<MutationRecordWorkspaceAccessArgs, 'workspaceSlug'>>;
   registerExternalFile?: Resolver<ResolversTypes['RegisterExternalFileResult'], ParentType, ContextType, RequireFields<MutationRegisterExternalFileArgs, 'input'>>;
   removeBoardCollaborator?: Resolver<ResolversTypes['RemoveBoardCollaboratorResult'], ParentType, ContextType, RequireFields<MutationRemoveBoardCollaboratorArgs, 'boardId' | 'userId'>>;
   removeChannelMember?: Resolver<ResolversTypes['RemoveChannelMemberResult'], ParentType, ContextType, RequireFields<MutationRemoveChannelMemberArgs, 'channelId' | 'userId' | 'workspaceId'>>;
@@ -4928,6 +4947,13 @@ export type ReadReceiptsResponseResolvers<ContextType = ServiceContext, ParentTy
   totalReads?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
 }>;
 
+export type RecordWorkspaceAccessPayloadResolvers<ContextType = ServiceContext, ParentType extends ResolversParentTypes['RecordWorkspaceAccessPayload'] = ResolversParentTypes['RecordWorkspaceAccessPayload']> = ResolversObject<{
+  lastAccessedAt?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  projectSlug?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
+  success?: Resolver<ResolversTypes['Boolean'], ParentType, ContextType>;
+  workspaceSlug?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+}>;
+
 export type RegisterExternalFileResultResolvers<ContextType = ServiceContext, ParentType extends ResolversParentTypes['RegisterExternalFileResult'] = ResolversParentTypes['RegisterExternalFileResult']> = ResolversObject<{
   expiresAt?: Resolver<ResolversTypes['DateTime'], ParentType, ContextType>;
   fileId?: Resolver<ResolversTypes['ID'], ParentType, ContextType>;
@@ -5280,6 +5306,7 @@ export type WorkspaceResolvers<ContextType = ServiceContext, ParentType extends 
 
 export type WorkspaceHomeEntryResolvers<ContextType = ServiceContext, ParentType extends ResolversParentTypes['WorkspaceHomeEntry'] = ResolversParentTypes['WorkspaceHomeEntry']> = ResolversObject<{
   id?: Resolver<ResolversTypes['ID'], ParentType, ContextType>;
+  lastActiveProjectId?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
   logoUrl?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
   memberRole?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
   name?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
@@ -5479,6 +5506,7 @@ export type Resolvers<ContextType = ServiceContext> = ResolversObject<{
   ReactionUsersConnection?: ReactionUsersConnectionResolvers<ContextType>;
   ReadReceiptUser?: ReadReceiptUserResolvers<ContextType>;
   ReadReceiptsResponse?: ReadReceiptsResponseResolvers<ContextType>;
+  RecordWorkspaceAccessPayload?: RecordWorkspaceAccessPayloadResolvers<ContextType>;
   RegisterExternalFileResult?: RegisterExternalFileResultResolvers<ContextType>;
   RemoveBoardCollaboratorResult?: RemoveBoardCollaboratorResultResolvers<ContextType>;
   RemoveChannelMemberResult?: RemoveChannelMemberResultResolvers<ContextType>;

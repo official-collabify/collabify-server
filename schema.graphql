@@ -213,6 +213,7 @@ type Mutation {
   updateWorkspaceNotifPrefs(workspaceId: String!, input: UpdateScopedPreferencesInput!): ScopedNotificationPreference!
   muteWorkspace(workspaceId: String!, until: String): Boolean!
   unmuteWorkspace(workspaceId: String!): Boolean!
+  recordWorkspaceAccess(workspaceSlug: String!, projectSlug: String): RecordWorkspaceAccessPayload!
   markNotificationRead(ids: [ID!]!): Boolean!
   markAllNotificationsRead: Boolean!
   createProject(workspaceId: ID!, input: CreateProjectInput!): Project!
@@ -446,6 +447,7 @@ type WorkspaceHomeEntry {
   name: String!
   logoUrl: String
   memberRole: String!
+  lastActiveProjectId: String
 }
 
 type PendingInviteEntry {
@@ -572,6 +574,13 @@ type WorkspaceLogoUploadPayload {
   """The S3 key to store in Workspace.logoS3Key after PUT succeeds."""
   logoS3Key: String!
   expiresAt: String!
+}
+
+type RecordWorkspaceAccessPayload {
+  success: Boolean!
+  workspaceSlug: String!
+  projectSlug: String
+  lastAccessedAt: String!
 }
 
 type WorkspaceInviteInfo {

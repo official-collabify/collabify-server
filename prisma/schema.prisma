@@ -166,14 +166,18 @@ model WorkspaceMember {
   // Unified role FK — points to Role table (seeded via seed-auth-roles.ts)
   roleId String @map("role_id")
 
-  joinedAt DateTime @default(now()) @map("joined_at")
+  joinedAt            DateTime  @default(now()) @map("joined_at")
+  lastAccessedAt      DateTime  @default(now()) @map("last_accessed_at")
+  lastActiveProjectId String?   @map("last_active_project_id")
 
-  workspace    Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  assignedRole Role      @relation("WorkspaceMemberRole", fields: [roleId], references: [id])
+  workspace         Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  user              User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  assignedRole      Role      @relation("WorkspaceMemberRole", fields: [roleId], references: [id])
+  lastActiveProject Project?  @relation("MemberLastActiveProject", fields: [lastActiveProjectId], references: [id], onDelete: SetNull)
 
   @@unique([workspaceId, userId])
   @@index([userId])
+  @@index([userId, lastAccessedAt(sort: Desc)])
   @@index([roleId])
   @@map("workspace_members")
 }
@@ -326,6 +330,7 @@ model Project {
   projectCounters          ProjectCounter[]
   meets                    Meet[]
   collabifyAiConversations CollabifyAiConversation[]
+  memberLastActiveRefs     WorkspaceMember[]         @relation("MemberLastActiveProject")
 
   @@unique([workspaceId, key])
   @@unique([id, workspaceId])

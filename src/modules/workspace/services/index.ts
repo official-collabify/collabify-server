@@ -19,4 +19,5 @@ export * from "./remove-role-permission";
 export * from "./rename-workspace-slug";
 export * from "./request-workspace-logo-upload";
 export * from "./update-workspace-notif-prefs";
+export * from "./record-workspace-access";
 

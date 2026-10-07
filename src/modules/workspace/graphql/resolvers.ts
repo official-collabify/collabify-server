@@ -49,6 +49,8 @@ import {
   RequestWorkspaceLogoUploadSchema,
   updateWorkspaceNotifPrefs,
   UpdateWorkspaceNotifPrefsSchema,
+  recordWorkspaceAccess,
+  RecordWorkspaceAccessSchema,
 } from "../services";
 
 // Queries
@@ -395,6 +397,15 @@ export const resolvers: Resolvers = {
         ...args.input,
       });
       return updateWorkspaceNotifPrefs(data, ctx);
+    },
+    recordWorkspaceAccess: async (_root, args, ctx) => {
+      if (!ctx.auth.userId) throw AppError.unauthorized("Unauthorized");
+      const data = RecordWorkspaceAccessSchema.parse({
+        workspaceSlug: args.workspaceSlug,
+        projectSlug: args.projectSlug,
+        actorUserId: ctx.auth.userId,
+      });
+      return recordWorkspaceAccess(data, ctx);
     },
     muteWorkspace: async (_root, args, ctx) => {
       if (!ctx.auth.userId) throw AppError.unauthorized("Unauthorized");

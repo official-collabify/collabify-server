@@ -35,7 +35,7 @@ export const getUserHome = async (
         select: { name: true },
       },
     },
-    orderBy: { joinedAt: "desc" },
+    orderBy: { lastAccessedAt: "desc" },
   });
 
   const workspaces = workspaceMemberships.map((m) => ({
@@ -44,6 +44,7 @@ export const getUserHome = async (
     name: m.workspace.name,
     logoUrl: m.workspace.logoS3Key,
     memberRole: m.assignedRole.name,
+    lastActiveProjectId: m.lastActiveProjectId,
   }));
 
   // 3. Fetch pending invites matching user's email
