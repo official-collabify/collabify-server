@@ -8,6 +8,7 @@
  */
 import { AppError } from "@/shared/errors";
 import { SlugUtil } from "@/shared/utils/slug.util";
+import { RESERVED_SLUGS } from "@/shared/config/limits";
 import { checkSlugAvailability } from "../../check-slug-availability";
 import type { ServiceContext } from "@/graphql/types";
 
@@ -27,6 +28,17 @@ export async function findAvailableSlug(
       customSlug && attempts === 0
         ? customSlug
         : SlugUtil.generateNext(baseSlug, attempts);
+
+    if ((RESERVED_SLUGS as readonly string[]).includes(candidateSlug)) {
+      if (customSlug && attempts === 0) {
+        throw AppError.conflict(
+          `The slug '${customSlug}' is reserved. Please choose another.`,
+          "WORKSPACE_ONBOARDING_CUSTOM_SLUG_TAKEN"
+        );
+      }
+      attempts++;
+      continue;
+    }
 
     const check = await checkSlugAvailability(
       { slug: candidateSlug, userId },

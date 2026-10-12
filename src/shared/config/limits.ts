@@ -119,6 +119,8 @@ export const RESERVED_SLUGS = [
   "webhooks",
   "welcome",
   "wiki",
+  "workspace",
+  "workspaces",
   "www",
   // Offensive / Blacklist candidates (Minimal example set)
   "abuse",
@@ -129,6 +131,8 @@ export const RESERVED_SLUGS = [
   "undefined",
   "void",
 ] as const;
+
+export const RESERVED_WORKSPACE_SLUGS = RESERVED_SLUGS;
 
 export const WORKSPACE_LIMITS = {
   // Max workspaces a user can own in this phase

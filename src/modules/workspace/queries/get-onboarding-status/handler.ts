@@ -42,10 +42,14 @@ export const getOnboardingStatus = async (
     };
   }
 
+  const projectCount = await db.project.count({
+    where: { workspaceId: workspaces[0].id, deletedAt: null },
+  });
+
   return {
     hasUser: true,
     hasWorkspace: true,
-    hasProject: false,
+    hasProject: projectCount > 0,
     workspaceSlug: workspaces[0].slug,
   };
 };
