@@ -129,7 +129,7 @@ export async function sendInvites(
         select: { fullName: true },
       });
 
-      const link = `${env.FRONTEND_URL}/workspace/join?token=${token}`;
+      const link = `${env.FRONTEND_URL}/join?token=${token}`;
 
       // Emit notification outbox event (best-effort, non-transactional)
       // Outbox is emitted INSIDE the invite transaction so we don't lose the event

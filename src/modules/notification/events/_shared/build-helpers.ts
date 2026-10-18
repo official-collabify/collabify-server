@@ -20,7 +20,7 @@ export const urls = {
   page:         (slug: string, pageId: string)          => `${APP_URL}/workspace/${slug}/pages/${pageId}`,
   whiteboard:   (slug: string, wbId: string)            => `${APP_URL}/workspace/${slug}/whiteboard/${wbId}`,
   conversation: (convId: string)                        => `${APP_URL}/chat/${convId}`,
-  inviteAccept: (token: string)                         => `${APP_URL}/workspace/join?token=${token}`,
+  inviteAccept: (token: string)                         => `${APP_URL}/join?token=${token}`,
 };
 
 // ── Realtime helpers ──────────────────────────────────────────────────────────
